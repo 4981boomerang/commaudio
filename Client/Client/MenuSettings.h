@@ -1,0 +1,5 @@
+#define IDM_CONNECT			101
+#define IDM_DOWNLOAD_FILE	102
+#define IDM_UPLOAD_PACKET	103
+#define IDM_MUSIC			104
+#define IDM_VOIP			105
