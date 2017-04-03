@@ -44,7 +44,7 @@ class SoundFilePacketizer
 public:
 	SoundFilePacketizer(const int packsize = DEFAULT_PACKSIZE);
 	~SoundFilePacketizer();
-	std::string & getNextPacket();
+	std::string getNextPacket();
 	void makePacketsFromFile(const char * fpath);
 	long getFileSize() { return filesize; };
 	long getTotalPackets();

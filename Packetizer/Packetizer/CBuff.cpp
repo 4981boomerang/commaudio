@@ -60,6 +60,7 @@ using namespace std;
 CBuff::CBuff()
 	:_head(0),
 	_tail(0),
+	_buffSize(DEFAULT_SIZE),
 	_capacity(DEFAULT_SIZE),
 	_semHead(0),
 	_semTail(DEFAULT_SIZE)
@@ -109,7 +110,7 @@ void CBuff::empty()
 -- stores a string into the next available slot in the circular buffer
 -- if the buffer is filled, the push will block until space becomes free
 --------------------------------------------------------------------------*/	
-void CBuff::push_back(string & str)
+void CBuff::push_back(string str)
 {	
 	// make sure you can insert, else wait
 	_semTail.wait();

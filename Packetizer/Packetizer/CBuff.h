@@ -50,7 +50,7 @@ public:
 	~CBuff();
 
 	void empty();
-	void push_back(std::string & str);
+	void push_back(std::string str);
 	std::string & pop();
 	const std::string & peek() const;
 	

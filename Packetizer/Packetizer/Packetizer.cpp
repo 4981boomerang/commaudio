@@ -73,11 +73,12 @@ SoundFilePacketizer::~SoundFilePacketizer()
 -- NOTES:
 -- reutrns the value of the next packet		
 --------------------------------------------------------------------------*/
-string & SoundFilePacketizer::getNextPacket()
+string SoundFilePacketizer::getNextPacket()
 {
+
 	if (static_cast<unsigned int>(packindex) >= vPack.size() - 1)
 	{
-		return string("");
+		return "";
 	}
 	return vPack[packindex++];
 }
