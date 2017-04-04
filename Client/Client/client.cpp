@@ -488,7 +488,7 @@ bool recvServerMessage() {
 		break;
 	case SONG_REQUEST:
 		//get file from server and save to disk
-		if (downloadFile() == -1) {
+		if (!downloadFile()) {
 			return false;
 		}
 		break;
