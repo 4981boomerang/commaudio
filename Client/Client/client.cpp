@@ -25,8 +25,9 @@
 
 #define DEFAULT_PORT	5555	
 #define WM_SOCKET		104
-#define DATA_BUFSIZE	1024
+#define PACKET_SIZE		1024
 #define MAX_THREADS		3
+#define DEFAULT_IP		"127.0.0.1"
 
 
 #include <winsock2.h>
@@ -38,6 +39,10 @@
 #include <tchar.h>
 #include <strsafe.h>
 #include <vector>
+
+#define SONG_LIST	 1
+#define CLIENT_LIST  2
+#define SONG_REQUEST 3
 
 
 typedef struct {
@@ -51,7 +56,7 @@ typedef struct {
 
 typedef struct {
 	char* username;;
-	char* ip;	//used for inter-client communication
+	char* ip;	
 } ClientData;
 
 typedef struct {
@@ -63,14 +68,16 @@ typedef struct {
 using namespace std;
 
 LRESULT CALLBACK Idle(HWND, UINT, WPARAM, LPARAM);
-bool connect();
 DWORD WINAPI command(LPVOID lpParam);
+DWORD WINAPI recvCommand(LPVOID lpParam);
+DWORD WINAPI connect(LPVOID lpParam);
 bool uploadFile();
 bool downloadFile();
+bool recvServerMessage();
 
-static TCHAR Name[] = TEXT("COMM Audio Client");	//Name of main window
-HWND hwnd;											//Handle to main window
-HINSTANCE mainInst;									//Instance of main window//at this application
+static TCHAR Name[] = TEXT("COMM Audio Client");	
+HWND hwnd;											
+HINSTANCE mainInst;									
 SOCKET Socket = NULL;
 HANDLE  hThreadArray[MAX_THREADS];
 DWORD dwThreadIdArray[MAX_THREADS];
@@ -82,7 +89,7 @@ vector<ClientData> clients;
 /*---------------------------------------------------------------------------------
 --  FUNCTION:      WinMain
 --
---  DATE:          Feb 3, 2017
+--  DATE:          Mar 20, 2017
 --
 --  DESIGNER:      Aing Ragunathan
 --
@@ -153,7 +160,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hprevInstance,
 /*---------------------------------------------------------------------------------
 --  FUNCTION:     Idle
 --
---  DATE:         Mar 27, 2017
+--  DATE:         Mar 20, 2017
 --
 --  DESIGNER:     Aing Ragunathan
 --
@@ -167,7 +174,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hprevInstance,
 --  RETURNS:      
 --
 --  NOTES:
---		
+--				Idle state for managing connections, threads and UI
 -----------------------------------------------------------------------------------*/
 LRESULT CALLBACK Idle(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
@@ -177,9 +184,7 @@ LRESULT CALLBACK Idle(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 		switch (LOWORD(wParam))  //Parsing the menu selections
 		{
 		case IDM_CONNECT:
-			if (connect()) {
-				hThreadArray[0] = CreateThread(NULL, 0, command, NULL, 0, &dwThreadIdArray[0]);   
-			}
+			hThreadArray[0] = CreateThread(NULL, 0, connect, NULL, 0, &dwThreadIdArray[0]);
 			break;
 		case IDM_DOWNLOAD_FILE:
 			downloadFile();
@@ -216,29 +221,26 @@ LRESULT CALLBACK Idle(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 }
 
 /*---------------------------------------------------------------------------------
---  FUNCTION:     Connect
+--  FUNCTION:   Connect
 --
---  DATE:         Mar 27, 2017
+--  DATE:       Mar 20, 2017
 --
---  DESIGNER:     Aing Ragunathan
+--  DESIGNER:   ing Ragunathan
 --
---  INTERFACE:    
+--  INTERFACE:  
+--				TCHAR[16] ip = ip address of server
+--				int port = port number of server
 --
---  RETURNS:      
+--  RETURNS:    void
 --
 --  NOTES:
---				Connects to the server for commands only
+--				Connects to the server for tcp commands only.
+--				Uses default server ip or port isn't included.
 -----------------------------------------------------------------------------------*/
-bool connect() {
-	int Ret;					//check results of functions
-	WSADATA WsaDat;
+DWORD WINAPI connect(LPVOID lpParam){
 	struct hostent *host;
-	TCHAR ip[16] = "127.0.0.1";	//get from UI
-	int port = 5555;			//get from UI
-	char messageBuffer[32];
-	ControlMessage *controlMessage;
-	SongData* songData;
-	ClientData* clientData;
+	TCHAR ip[16] = DEFAULT_IP;
+	int port = DEFAULT_PORT;
 
 	//Resolve IP address
 	if ((host = gethostbyname(ip)) == NULL)
@@ -268,8 +270,6 @@ bool connect() {
 	SockAddr.sin_family = AF_INET;
 	SockAddr.sin_addr.s_addr = *((unsigned long*)host->h_addr);
 
-	//WRAP FROM HERE (FOLLOW DESIGN)
-
 	// Connecting to the server
 	if (connect(Socket, (struct sockaddr *)&SockAddr, sizeof(SockAddr)) == SOCKET_ERROR)
 	{
@@ -280,48 +280,66 @@ bool connect() {
 		return false;
 	}
 
-	//WRAP FROM HERE (UPDATE DESIGN, use substates)
-
-	//block until Control message is received from the server for songs
-	recv(Socket, messageBuffer, sizeof(ControlMessage), 0);
-	controlMessage = (ControlMessage *)messageBuffer;
-
-	//recv all the songs from the server
-	for (int i = 0; i < controlMessage->numOfSongs; i++) {
-		recv(Socket, messageBuffer, sizeof(SongData), 0);	//receive the next song object
-		songData = (SongData *)messageBuffer;	//extract song from buffer
-		songs.push_back(SongData());	//create a new song object in the vector
-		songs[i].SID = songData->SID;	//copy song id over
-		songs[i].artist = songData->artist;	//copy artist over
-		songs[i].title = songData->title;	//copy title over
+	//update song list
+	if (!recvServerMessage()) {
+		perror("connect - song list update failed!");
+		return false;
 	}
 
-	//block until Control message is received from the server for clients
-	recv(Socket, messageBuffer, sizeof(ControlMessage), 0);
-	controlMessage = (ControlMessage *)messageBuffer;
-
-	//recv all the songs from the server
-	for (int i = 0; i < controlMessage->numOfClients; i++) {
-		recv(Socket, messageBuffer, sizeof(ClientData), 0);	//receive the next client info object
-		clientData = (ClientData *)messageBuffer;	//extract client from buffer
-		clients.push_back(ClientData());	//create a new client object in the vector
-		clients[i].username = clientData->username;	//copy username over
-		clients[i].ip = clientData->ip;	//copy ip over
+	//update client list
+	if (!recvServerMessage()) {
+		perror("connect - client list update failed!");
+		return false;
 	}
 
+	hThreadArray[1] = CreateThread(NULL, 0, recvCommand, NULL, 0, &dwThreadIdArray[0]);
 
 	return true;
 }
 
+/*---------------------------------------------------------------------------------
+--  FUNCTION:     command
+--
+--  DATE:         Mar 29, 2017
+--
+--  DESIGNER:     Aing Ragunathan
+--
+--  INTERFACE:
+--
+--  RETURNS:
+--
+--  NOTES:
+--				Threaded function to receive messages from the server to update the
+--				client and song list.	
+--				
+--				FYI might be replaced by idle
+-----------------------------------------------------------------------------------*/
 DWORD WINAPI command(LPVOID lpParam){
 	//GUI COMMANDS GOES HERE
+		//request to play a song
+		//upload song to server
+		//download song from server
 
 	return 0;
 }
 
+/*---------------------------------------------------------------------------------
+--  FUNCTION:	uploadFile
+--
+--  DATE:		Mar 27, 2017
+--
+--  DESIGNER:   Aing Ragunathan
+--
+--  INTERFACE:	none
+--
+--  RETURNS:	void
+--
+--  NOTES:
+--				Sends a contol message to the server before sending a file.
+-----------------------------------------------------------------------------------*/
 bool uploadFile() {
 	HANDLE fileOutputHandle;	//Handle to the requested file to send
-	TCHAR fileBuffer[1024] = { 0 };	//buffer for file
+	TCHAR fileBuffer[PACKET_SIZE] = { 0 };	//buffer for file
 	//TCHAR filename[MAX_PATH] = "McLaren.txt";
 	TCHAR filename[MAX_PATH] = "hello.txt";
 	OVERLAPPED ol = { 0 };
@@ -331,6 +349,7 @@ bool uploadFile() {
 
 	fileOutputHandle = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
+	//validate file exists and send
 	if (fileOutputHandle == INVALID_HANDLE_VALUE) {
 		MessageBox(hwnd,
 			"Can not open file",
@@ -339,11 +358,8 @@ bool uploadFile() {
 		return false;
 	}
 	else {
-
-		
-
 		do {
-			if (!ReadFile(fileOutputHandle, fileBuffer, 1024 - 1, &bytesRead, &ol)) {
+			if (!ReadFile(fileOutputHandle, fileBuffer, PACKET_SIZE - 1, &bytesRead, &ol)) {
 				printf("Terminal failure: Unable to read from file.\n GetLastError=%08x\n", GetLastError());
 				MessageBox(hwnd,
 					"Can not read from file",
@@ -362,14 +378,153 @@ bool uploadFile() {
 			send(Socket, fileBuffer, bytesRead, 0); //send the buffer to the server		
 			ol.Offset += bytesRead;	//move the reading window 
 			temp = fileBuffer;	//reset the buffer
-			temp.resize(1024);
-		} while (strlen(fileBuffer) >= 1023);
+			temp.resize(PACKET_SIZE);
+		} while (strlen(fileBuffer) >= PACKET_SIZE-1);
 	}
 
 
 	return true;
 }
 
+/*---------------------------------------------------------------------------------
+--  FUNCTION:   downloadFile
+--
+--  DATE:       Mar 27, 2017
+--
+--  DESIGNER:   Aing Ragunathan
+--
+--  INTERFACE:	
+--
+--  RETURNS:
+--
+--  NOTES:
+--				Receives a file from the server. Number of packets must be specified.
+-----------------------------------------------------------------------------------*/
 bool downloadFile() {
+
+	//differentiate file packet from command
+	return true;
+}
+
+/*---------------------------------------------------------------------------------
+--  FUNCTION:     recvCommand
+--
+--  DATE:         Mar 27, 2017
+--
+--  DESIGNER:     Aing Ragunathan
+--
+--  INTERFACE:
+--
+--  RETURNS:
+--
+--  NOTES:
+--				Threaded function used to receive commands from the server. Waits for
+--				control messages on a loop until the program ends. 
+--				Command messages can update the client or songs list.
+-----------------------------------------------------------------------------------*/
+DWORD WINAPI recvCommand(LPVOID lpParam) {
+	while (true) {
+		recvServerMessage();	//update song and client lists
+	}
+}
+
+/*---------------------------------------------------------------------------------
+--  FUNCTION:     Connect
+--
+--  DATE:         Mar 27, 2017
+--
+--  DESIGNER:     Aing Ragunathan
+--
+--  INTERFACE:
+--
+--  RETURNS:
+--
+--  NOTES:
+--				Receives control messages from the server and updates lists accordingly
+--				or initiates downloading a file from the server.
+-----------------------------------------------------------------------------------*/
+bool recvServerMessage() {
+	char messageBuffer[PACKET_SIZE];
+	ControlMessage *controlMessage;
+	ClientData *clientData;
+	SongData *songData;
+		
+	//Get control message from server
+	if (recv(Socket, messageBuffer, sizeof(ControlMessage), 0) == -1) {
+		perror("recvServerMessage - Recv control message failed!");
+		return false;
+	}
+	controlMessage = (ControlMessage *)messageBuffer;
+
+	//manage server update or download response
+	switch (controlMessage->header)
+	{
+	case SONG_LIST:
+		//recv all the songs from the server			
+		for (int i = 0; i < controlMessage->numOfSongs; i++) {
+			if (recv(Socket, messageBuffer, sizeof(SongData), 0) == -1) {
+				perror("recvServerMessage - Recv song data failed!");
+				return false;
+			}
+			songData = (SongData *)messageBuffer;	//extract song from buffer
+			songs.push_back(SongData());	//create a new song object in the vector
+			songs[i].SID = songData->SID;	//copy song id over
+			songs[i].artist = songData->artist;	//copy artist over
+			songs[i].title = songData->title;	//copy title over
+		}
+		break;
+	case CLIENT_LIST:
+		//recv all the clients names from the server
+		for (int i = 0; i < controlMessage->numOfClients; i++) {
+			if (recv(Socket, messageBuffer, sizeof(ClientData), 0) == -1) {
+				perror("recvServerMessage - Recv client data failed!");
+				return false;
+			}
+			clientData = (ClientData *)messageBuffer;	//extract client from buffer
+			clients.push_back(ClientData());	//create a new client object in the vector
+			clients[i].username = clientData->username;	//copy username over
+			clients[i].ip = clientData->ip;	//copy ip over
+		}
+		break;
+	case SONG_REQUEST:
+		//get file from server and save to disk
+		if (downloadFile() == -1) {
+			return false;
+		}
+		break;
+	}
+
+	return true;
+}
+
+/*---------------------------------------------------------------------------------
+--  FUNCTION:   requestSong
+--
+--  DATE:       April 3, 2017
+--
+--  DESIGNER:   Aing Ragunathan
+--
+--  INTERFACE:	 
+				int song - SID of the song requested
+--
+--  RETURNS:	none
+--
+--  NOTES:
+--				Sends a song request to the server.
+-----------------------------------------------------------------------------------*/
+bool requestSong(int song) {
+	ControlMessage *controlMessage;
+	char *messageBuffer;
+	
+	//setup control message
+	controlMessage = new ControlMessage();
+	controlMessage->header = SONG_REQUEST;
+	controlMessage->SID = song;
+	messageBuffer = (char *)controlMessage;
+
+	//send message to server
+	if (send(Socket, messageBuffer, strlen(messageBuffer), 0) == -1)
+		return false;
+
 	return true;
 }
