@@ -24,7 +24,7 @@ using namespace std;
 -- ctor
 --------------------------------------------------------------------------*/
 SoundFilePacketizer::SoundFilePacketizer(int size)
-	:filesize(-1), fp(nullptr), packsize(size)
+	:filesize(-1), fp(nullptr), packsize(size), packindex(0)
 {
 }
 
@@ -73,14 +73,12 @@ SoundFilePacketizer::~SoundFilePacketizer()
 -- NOTES:
 -- reutrns the value of the next packet		
 --------------------------------------------------------------------------*/
-string SoundFilePacketizer::getNextPacket()
+char * SoundFilePacketizer::getNextPacket()
 {
-
-	if (static_cast<unsigned int>(packindex) >= vPack.size() - 1)
+	if (static_cast<unsigned int>(packindex) < vPack.size() )
 	{
-		return "";
+		return vPack[packindex++];
 	}
-	return vPack[packindex++];
 }
 
 /*--------------------------------------------------------------------------
@@ -111,6 +109,63 @@ long SoundFilePacketizer::getTotalPackets()
 }
 
 /*--------------------------------------------------------------------------
+-- FUNCTION: getlastPackSize
+--
+-- DATE: Feb. 06, 2017
+--
+-- REVISIONS:
+-- Version 1.0 - [EY] - 2016/Feb/06 - Created Functions
+-- Version 1.1 - [EY] - 2016/Feb/06 - Turned into class funtion
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE: long getTotalPackets (functionParams)
+--
+-- RETURNS:
+-- long that represents the number of packets to send
+--
+-- NOTES:
+-- calcs the number of packets to send when a file is broken down
+-- to a specific byte suize per packet
+--------------------------------------------------------------------------*/
+int SoundFilePacketizer::getLastPackSize()
+{
+	return static_cast<int>(filesize - ((getTotalPackets() - 1) * packsize));
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: clearVector
+--
+-- DATE: Apr. 4, 2017
+--
+-- REVISIONS:
+-- Version 1.0 - [EY] - 2016/Feb/06 - Clears out the vector by deleting all elements
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE: void makePacketsFromFile()
+--
+-- NOTES:
+-- clears out the vector. be warned! this is call every time you make 
+-- a new file! 
+--------------------------------------------------------------------------*/
+void SoundFilePacketizer::clearVector()
+{
+	for (int i = 0; i < vPack.size(); ++i)
+	{
+		delete[] vPack[i];
+		vPack[i] = NULL;
+	}
+	filesize = 0;
+	packindex = 0;
+	vPack.clear();
+}
+
+/*--------------------------------------------------------------------------
 -- FUNCTION: makePacketsFromFile(File* pfile, int packsize)
 --
 -- DATE: Feb. 06, 2017
@@ -134,22 +189,14 @@ long SoundFilePacketizer::getTotalPackets()
 -- this function creates a vector pf packets and passes it back 
 --------------------------------------------------------------------------*/
 
-void SoundFilePacketizer::makePacketsFromFile(const char * fpath /*CBuff*/)
+void SoundFilePacketizer::makePacketsFromFile(const char * fpath)
 {
 	int read;
-	char * pstr = nullptr;
 
 	//empty a vector that may hold something else
-	vPack.empty();
-
-	pstr = (char *)malloc(packsize+1);
-	if (!pstr)
+	if (!vPack.empty())
 	{
-		cout << "Error on malloc for ptr. "
-			<< GetLastError();
-		free(pstr);
-		fclose(fp);
-		return;
+		clearVector();
 	}
 	
 	openFile(fpath);
@@ -159,32 +206,19 @@ void SoundFilePacketizer::makePacketsFromFile(const char * fpath /*CBuff*/)
 	}
 
 	calcFileSize();
-	
 	while (!feof(fp))
 	{
 	
-		string str;
-		read = fread(static_cast<void*>(pstr), sizeof(char), packsize, fp);
+		char * buff = new char[packsize]();
+		read = fread(static_cast<void *>(buff), sizeof(char), packsize, fp);
 		if (ferror(fp))
 		{
 			cout << "Error on file read. "
 				<< GetLastError();
-			free(pstr);
 			fclose(fp);
 		}
-
-		if (read > 0 && read < packsize)
-		{
-			memset(pstr + read, 0, packsize - read);
-		}
-		else
-		{
-			pstr[packsize] = '\0';
-		}
-		vPack.push_back(std::string(pstr));
+		vPack.push_back(buff);
 	}
-
-	free(pstr);
 	closeFile();
 }
 
@@ -278,12 +312,14 @@ void SoundFilePacketizer::calcFileSize()
 		cerr << "Error on fseek. " << GetLastError();
 		return;
 	}
+
 	if ((filesize = ftell(fp)) < 0)
 	{
 		cerr << "Error on ftell. " << GetLastError();
 		rewind(fp);
 		return;
 	}
+
 	rewind(fp);
 }
 
