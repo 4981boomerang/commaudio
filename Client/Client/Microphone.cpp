@@ -27,8 +27,8 @@ DWORD WINAPI microphoneStart(LPVOID lpParam) {
 		return 0;
 	}
 
-	// set wave output to disk file, mp3 encoding
-	if (player->SetWaveOutFile(OUTPUT_FILE, sfMp3, 1) == 0)	{
+	// set wave output to disk file, mp3 encoding, no playback
+	if (player->SetWaveOutFile(OUTPUT_FILE, sfMp3, 0) == 0)	{
 		perror("Microphone: ouput file failed!");
 		player->Release();
 		return 0;
@@ -40,9 +40,6 @@ DWORD WINAPI microphoneStart(LPVOID lpParam) {
 		player->Release(); // delete ZPlay class
 		return 0;
 	}
-
-	player->SetMasterVolume(0, 0);	//mute the user's voice echo
-
 
 	return 0;
 }
