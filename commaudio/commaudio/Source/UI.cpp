@@ -247,7 +247,7 @@ int UI::getFilePath() {
 --
 -- PROGRAMMER: Michael Goll
 --
--- INTERFACE:  char * getFileName(HWND hDlg)
+-- INTERFACE:  char * getFileName()
 --
 -- PARAMETER:  none
 --
