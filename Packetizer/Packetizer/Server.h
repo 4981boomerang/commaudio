@@ -1,7 +1,14 @@
 #pragma once
 
+#include <winsock2.h>
+#include <mutex>
+#include <map>
+#include <queue>
+#include <thread>
+
 #include "CBuff.h"
 #include "Packetizer.h"
+#include "WinTimer.h"
 #include "SocketWrappers.h"
 
 
@@ -27,13 +34,25 @@ class Server
 {
 public:
 	Server();
+	void stopStream();
+	void startStream();
 	int runServer(const char * ipaddr);
-
+	inline bool waitForTimer();
 private:
+	void loadLibrary();
+	void streamSendLoop();
+	void streamPackLoop();
+	std::map <int,std::string> playlist; // the library
+	
+	// Map of different types of libraries 
+	// SOCKET sockTCP;	
 	SOCKET sockUDP;
-	HANDLE hTimer;
-	LARGE_INTEGER dueTime;
+	WinTimer timer;
+	std::thread streamSend;
+	std::thread streamPack;
 	SoundFilePacketizer packer;
-	long totalPacksForSong;
 	CBuff cbuff;
+	addrinfo * sendAddr;
+	std::mutex imtx;
+	bool isStreaming;
 };
