@@ -202,3 +202,27 @@ void AudioPlayer::init() {
 		player->SetCallbackFunc(callBackFunc, (TCallbackMessage) MsgStreamNeedMoreData, 0);
 	}
 }
+
+
+/*--------------------------------------------------------------------------------------------
+-- FUNCTION:   pop
+--
+-- DATE:       April 6, 2017
+--
+-- DESIGNER:   Michael Goll, Aing Ragunathan, Eva Yu, Jamie Lee
+--
+-- PROGRAMMER: Michael Goll
+--
+-- INTERFACE:  char * pop()
+--
+-- PARAMETER:  none
+--
+-- RETURNS:    char * - the data string containing the music information.
+--
+-- NOTES:      Pops the head element of the circular buffer into the player's buffer
+--             to be used by LibZPlay internally.
+--------------------------------------------------------------------------------------------*/
+char * AudioPlayer::pop() {
+	strcpy_s(buffer, BUFSIZE, cbuff.pop().c_str());
+	return buffer;
+}

@@ -110,16 +110,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Headers\CBuff.h" />
     <ClInclude Include="Headers\libzplay.h" />
     <ClInclude Include="Headers\Main.h" />
-    <ClInclude Include="Headers\Network.h" />
     <ClInclude Include="Headers\AudioPlayer.h" />
+    <ClInclude Include="Headers\Node.h" />
+    <ClInclude Include="Headers\Semaphore.h" />
     <ClInclude Include="Headers\UI.h" />
     <ClInclude Include="Source\resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\CBuff.cpp" />
     <ClCompile Include="Source\Main.cpp" />
-    <ClCompile Include="Source\Network.cpp" />
     <ClCompile Include="Source\AudioPlayer.cpp" />
     <ClCompile Include="Source\UI.cpp" />
   </ItemGroup>

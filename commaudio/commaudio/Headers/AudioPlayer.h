@@ -130,14 +130,44 @@ public:
 	--------------------------------------------------------------------------------------------*/
 	void init();
 
-	CBuff& getBuf() {
-		return cbuff;
-	}
+	/*--------------------------------------------------------------------------------------------
+	-- FUNCTION:   getBuf
+	--
+	-- DATE:       April 6, 2017
+	--
+	-- DESIGNER:   Michael Goll, Aing Ragunathan, Eva Yu, Jamie Lee
+	--
+	-- PROGRAMMER: Michael Goll
+	--
+	-- INTERFACE:  char * pop()
+	--
+	-- PARAMETER:  none
+	--
+	-- RETURNS:    CBuff& - returns a reference to the player's circular buffer.
+	--
+	-- NOTES:      Used to get a reference to the circular buffer inside of the player.
+	--------------------------------------------------------------------------------------------*/
+	CBuff& getBuf() {return cbuff;}
 
-	char * pop() {
-		memcpy(buffer, cbuff.pop().c_str(), BUFSIZE);
-		return buffer;
-	}
+	/*--------------------------------------------------------------------------------------------
+	-- FUNCTION:   pop
+	--
+	-- DATE:       April 6, 2017
+	--
+	-- DESIGNER:   Michael Goll, Aing Ragunathan, Eva Yu, Jamie Lee
+	--
+	-- PROGRAMMER: Michael Goll
+	--
+	-- INTERFACE:  char * pop()
+	--
+	-- PARAMETER:  none
+	--
+	-- RETURNS:    char * - the data string containing the music information.
+	--
+	-- NOTES:      Pops the head element of the circular buffer into the player's buffer
+	--             to be used by LibZPlay internally.
+	--------------------------------------------------------------------------------------------*/
+	char * pop();
 	
 private:
 	/*--------------------------------------------------------------------------------------------

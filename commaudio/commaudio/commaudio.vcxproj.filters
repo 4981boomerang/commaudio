@@ -24,13 +24,19 @@
     <ClInclude Include="Headers\UI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\Network.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Headers\AudioPlayer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\CBuff.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Node.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Semaphore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -41,10 +47,10 @@
     <ClCompile Include="Source\UI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Network.cpp">
+    <ClCompile Include="Source\AudioPlayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\AudioPlayer.cpp">
+    <ClCompile Include="Source\CBuff.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
