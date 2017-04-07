@@ -3,47 +3,18 @@
 
 #include "libzplay.h"
 #include "UI.h"
+#include "CBuff.h"
+#include "Main.h"
+
+#define BUFSIZE 1024
 
 class AudioPlayer {
 public:
-	/*--------------------------------------------------------------------------------------------
-	-- FUNCTION:   AudioPlayer
-	--
-	-- DATE:       April 3, 2017
-	--
-	-- DESIGNER:   Michael Goll, Aing Ragunathan, Eva Yu, Jamie Lee
-	--
-	-- PROGRAMMER: Michael Goll
-	--
-	-- INTERFACE:  AudioPlayer()
-	--
-	-- PARAMETER:  none
-	--
-	-- RETURNS:    N/A
-	--
-	-- NOTES:      Constructor, creates the player.
-	--------------------------------------------------------------------------------------------*/
-	AudioPlayer();
-
-	/*--------------------------------------------------------------------------------------------
-	-- FUNCTION:   ~AudioPlayer
-	--
-	-- DATE:       April 3, 2017
-	--
-	-- DESIGNER:   Michael Goll, Aing Ragunathan, Eva Yu, Jamie Lee
-	--
-	-- PROGRAMMER: Michael Goll
-	--
-	-- INTERFACE:  ~AudioPlayer()
-	--
-	-- PARAMETER:  none
-	--
-	-- RETURNS:    N/A
-	--
-	-- NOTES:      Destructor, releases the player resources if it is initialized.
-	--------------------------------------------------------------------------------------------*/
-	~AudioPlayer();
-
+	
+	static AudioPlayer& instance() {
+		return aInstance;
+	}
+	
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   createPlayer
 	--
@@ -62,7 +33,7 @@ public:
 	--
 	-- NOTES:      Creates a libZPlay player for playing music.
 	--------------------------------------------------------------------------------------------*/
-	bool createPlayer();
+	libZPlay::ZPlay * createPlayer();
 
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   getPlayer
@@ -158,33 +129,62 @@ public:
 	-- NOTES:      Opens a stream for audio and associates the stream with a buffer.
 	--------------------------------------------------------------------------------------------*/
 	void init();
+
+	CBuff& getBuf() {
+		return cbuff;
+	}
+
+	char * pop() {
+		memcpy(buffer, cbuff.pop().c_str(), BUFSIZE);
+		return buffer;
+	}
 	
 private:
-	static libZPlay::ZPlay * player;
-
 	/*--------------------------------------------------------------------------------------------
-	-- FUNCTION:   callbackFunc
+	-- FUNCTION:   AudioPlayer
 	--
 	-- DATE:       April 3, 2017
 	--
-	-- DESIGNER:   LibZPlay Library
+	-- DESIGNER:   Michael Goll, Aing Ragunathan, Eva Yu, Jamie Lee
 	--
 	-- PROGRAMMER: Michael Goll
 	--
-	-- INTERFACE:  void init()
+	-- INTERFACE:  AudioPlayer()
 	--
-	-- PARAMETER:  void *           - instance of the application, casted to ZPlay type.
-	--             void *           - user data to be used.
-	--             TCallbackMessage - The libZPlay message for the player to react to.
-	--             unsigned int     - Parameter 1, not used but required in the interface.
-	--             unsigned int     - Parameter 2, not used but required in the interface.
+	-- PARAMETER:  none
 	--
-	-- RETURNS:    int - Always returns 0, required by the library.
+	-- RETURNS:    N/A
 	--
-	-- NOTES:      Callback function for the player, called when player needs more data
-	--             in the buffer.
+	-- NOTES:      Constructor, creates the player.
 	--------------------------------------------------------------------------------------------*/
-	int __cdecl callbackFunc(void *, void *, libZPlay::TCallbackMessage, unsigned int, unsigned int);
+	AudioPlayer();
+
+	/*--------------------------------------------------------------------------------------------
+	-- FUNCTION:   ~AudioPlayer
+	--
+	-- DATE:       April 3, 2017
+	--
+	-- DESIGNER:   Michael Goll, Aing Ragunathan, Eva Yu, Jamie Lee
+	--
+	-- PROGRAMMER: Michael Goll
+	--
+	-- INTERFACE:  ~AudioPlayer()
+	--
+	-- PARAMETER:  none
+	--
+	-- RETURNS:    N/A
+	--
+	-- NOTES:      Destructor, releases the player resources if it is initialized.
+	--------------------------------------------------------------------------------------------*/
+	~AudioPlayer();
+
+	static AudioPlayer aInstance;
+	libZPlay::ZPlay * player;
+	libZPlay::TStreamFormat format;
+	//internal buffer for LibZPlay to use
+	char buffer[BUFSIZE];
+	//circular buffer for application to use
+	CBuff cbuff;
 };
 
 #endif

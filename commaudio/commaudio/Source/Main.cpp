@@ -14,7 +14,6 @@
 --
 -- NOTES:       Creates and displays the user interface.
 --------------------------------------------------------------------------------------------------*/
-
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
 #pragma warning (disable: 4996)
@@ -27,6 +26,9 @@
 //Win32 Headers
 #include <atlstr.h>  
 #include <CommCtrl.h>
+
+//LibZPlay Header
+#include "../Headers/libzplay.h"
 
 //Custom Headers
 #include "../Headers/Main.h"
@@ -97,6 +99,7 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case IDC_CONNECT:
 			if (ui.getUserInput())
 				; //connect here
+			//construct the audioplayer
 
 			break;
 
@@ -115,11 +118,13 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case IDC_PLAY:
 			//change the "Play" button to "Pause"
 			ui.swapButtons(IDC_PLAY, IDC_PAUSE);
+			AudioPlayer::instance().play();
 			break;
 
 		case IDC_PAUSE:
 			//change the "Pause" button to "Play"
 			ui.swapButtons(IDC_PAUSE, IDC_PLAY);
+			AudioPlayer::instance().pause();
 			break;
 
 		case IDC_NEXT:
@@ -200,6 +205,20 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hprevInstance, LPSTR lspszCmdParam
 	}
 
 	return (int)msg.wParam;
+}
+
+int __stdcall callBackFunc(void * instance, void * userData, libZPlay::TCallbackMessage message, unsigned int param1, unsigned int param2) {
+	const auto ap = AudioPlayer::instance().getPlayer();
+	auto buffer = AudioPlayer::instance().pop();
+
+	switch (message) {
+	//player needs more data to play
+	case libZPlay::MsgStreamNeedMoreData:
+		//grabs data from the circular buffer and copies it to the player's internal buffer
+		ap->PushDataToStream(buffer, BUFSIZE);
+		break;
+	}
+	return 0;
 }
 
 

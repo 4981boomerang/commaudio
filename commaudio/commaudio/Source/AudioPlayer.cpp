@@ -5,7 +5,7 @@
 
 using namespace libZPlay;
 
-ZPlay * AudioPlayer::player = nullptr;
+AudioPlayer AudioPlayer::aInstance;
 
 /*--------------------------------------------------------------------------------------------
 -- FUNCTION:   AudioPlayer
@@ -24,10 +24,7 @@ ZPlay * AudioPlayer::player = nullptr;
 --
 -- NOTES:      Constructor, creates the player.
 --------------------------------------------------------------------------------------------*/
-AudioPlayer::AudioPlayer() {
-	if (!player)
-		createPlayer();
-}
+AudioPlayer::AudioPlayer() : player(createPlayer()), cbuff() {}
 
 /*--------------------------------------------------------------------------------------------
 -- FUNCTION:   ~AudioPlayer
@@ -69,12 +66,12 @@ AudioPlayer::~AudioPlayer() {
 --
 -- NOTES:      Creates a libZPlay player for playing music.
 --------------------------------------------------------------------------------------------*/
-bool AudioPlayer::createPlayer() {
+ZPlay * AudioPlayer::createPlayer() {
 	if (player = CreateZPlay()) {
-		return true;
+		return player;
 	}
 	
-	return false;
+	return nullptr;
 }
 
 /*--------------------------------------------------------------------------------------------
@@ -125,8 +122,9 @@ void AudioPlayer::play() {
 		player->GetStatus(&status);
 
 		//Error occurs during playback, abort
-		if (!status.fPlay)
+		if (!status.fPlay) {
 			break;
+		}
 
 		//update UI with new song position
 	}
@@ -195,49 +193,12 @@ void AudioPlayer::stop() {
 -- Need the server to also send the format along with the data
 -- The "&buffer" needs to be replaced to connect to the circular buffer
 -- read is the size of how much to read (packet size)
+-- the very first packet needs to be ~21000 bytes in order to get over the header
+--   and include at least one valid MP3 frame.
 */
 void AudioPlayer::init() {
-	/*if ((player->OpenStream(1, 1, &buffer, read, format)) == 0) {
+	if ((player->OpenStream(0, 1, &buffer, 21000, format)) == 0) {
 		//error occurred opening the stream
-		//will we need the callback if we have the buffer handling things?
-	}*/
-
-	//disables the callback functionality, possibly temporary depending
-	//on how the player works when the buffer is already defined
-	player->SetCallbackFunc(0, (TCallbackMessage)MsgStreamNeedMoreData, 0);
-}
-
-/*--------------------------------------------------------------------------------------------
--- FUNCTION:   callbackFunc
---
--- DATE:       April 3, 2017
---
--- DESIGNER:   LibZPlay Library
---
--- PROGRAMMER: Michael Goll
---
--- INTERFACE:  void init()
---
--- PARAMETER:  void *           - instance of the application, casted to ZPlay type.
---             void *           - user data to be used.
---             TCallbackMessage - The libZPlay message for the player to react to.
---             unsigned int     - Parameter 1, not used but required in the interface.
---             unsigned int     - Parameter 2, not used but required in the interface.
---
--- RETURNS:    int - Always returns 0, required by the library.
---
--- NOTES:      Callback function for the player, called when player needs more data
---             in the buffer.
---------------------------------------------------------------------------------------------*/
-
-//should not need this depending on how the circular buffer works.
-int __cdecl AudioPlayer::callbackFunc(void * instance, void * userData, TCallbackMessage message, unsigned int param1, unsigned int param2) {
-	switch (message) {
-	case MsgStreamNeedMoreData:
-		//player needs more data, grab from buffer
-		//player->PushDataToStream(buffer, read);
-		break;
+		player->SetCallbackFunc(callBackFunc, (TCallbackMessage) MsgStreamNeedMoreData, 0);
 	}
-
-	return 0;
 }

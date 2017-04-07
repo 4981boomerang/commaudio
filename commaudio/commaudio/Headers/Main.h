@@ -35,8 +35,11 @@
 //Custom Headers
 #include "../Source/resource.h"
 #include "../Headers/UI.h"
+#include "../Headers/AudioPlayer.h"
 
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
+int __stdcall callBackFunc(void * instance, void * userData, libZPlay::TCallbackMessage message, unsigned int param1, unsigned int param2);
 
 /* ----------------------------------------------------------------------------------------------
 -- FUNCTION:   DialogProc
