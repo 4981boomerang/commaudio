@@ -13,11 +13,12 @@
 
 
 #define BUFFSIZE 1024
-#define MCAST_IP "299.99.99.09"
+#define PORT 8123
+#define MCAST_IP "295.99.99.09"
 #define TEMP_IP "192.168.0.36"
 
 //The following function was set up for testing 
-int runServer(const char * ipaddr = TEMP_IP, int numPacks = 100, int timeinterval = 500);
+//int runServer(const char * ipaddr = TEMP_IP, int numPacks = 100, int timeinterval = 500);
 
 
 /***************************
@@ -34,6 +35,7 @@ class Server
 {
 public:
 	Server();
+	~Server();
 	void stopStream();
 	void startStream();
 	int runServer(const char * ipaddr);
@@ -52,7 +54,5 @@ private:
 	std::thread streamPack;
 	SoundFilePacketizer packer;
 	CBuff cbuff;
-	addrinfo * sendAddr;
-	std::mutex imtx;
 	bool isStreaming;
 };

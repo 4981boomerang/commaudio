@@ -16,12 +16,23 @@ using namespace std;
 
 Server::Server()
 {
+	initializeWSA();
 	// load map of songs
+	sockUDP = makeWSASocket(SOCK_DGRAM, 0);
+
 	loadLibrary();
+}
+
+Server::~Server()
+{
+	// join the threads
+
+	closeWSA();
 }
 
 void Server::startStream()
 {
+
 	// get file name library
 	//make thread for streaming
 	isStreaming = true;
@@ -63,8 +74,14 @@ void Server::streamPackLoop()
 
 void Server::streamSendLoop()
 {
+	sockaddr_in addr;
 	char * pstr;
 	int bsent;
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = inet_addr(MCAST_IP);
+	addr.sin_port = htons(PORT);
 	while (isStreaming)
 	{
 		//get info of next song
@@ -81,13 +98,13 @@ void Server::streamSendLoop()
 				if (!pstr)
 					continue;
 				
-				bsent = sendto(sockUDP, pstr, BUFFSIZE, 0, sendAddr->ai_addr, sendAddr->ai_addrlen);
+				bsent = sendto(sockUDP, pstr, BUFFSIZE, 0, (struct sockaddr *)&addr, sizeof(addr));
 				cout << "Bytes sent: " << bsent << "\n";
 			}
 		}
 		pstr = cbuff.pop(); //send last pack 
 		if (pstr)
-			bsent = sendto(sockUDP, pstr, lastpsz, 0, sendAddr->ai_addr, sendAddr->ai_addrlen);
+			bsent = sendto(sockUDP, pstr, lastpsz, 0, (struct sockaddr *)&addr, sizeof(addr));
 	}
 }
 
@@ -95,12 +112,12 @@ int Server::runServer(const char * ipaddr)
 {
 	//tcp socket , make , bind, listen , accpet .. 
 	// send lib
-	// sned client list 
+	// send client list 
 	// listen to commands
 	// if the client wants to stream a library, get index of lib  
 	int lib = 0;
 	// make a new thread to start stream
-	startStream(lib);
+	startStream();
 	return 0;
 }
 
