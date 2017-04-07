@@ -18,3 +18,7 @@
 #define OUTPUT_FILE "output.mp3"
 
 DWORD WINAPI microphoneStart(LPVOID lpParam);
+//int  __stdcall  myCallbackFunc(void* instance, void *user_data, TCallbackMessage message, 
+	//unsigned int param1, unsigned int param2);
+
+//unsigned int nOutputDataSize = 0;

@@ -395,42 +395,38 @@ bool recvServerMessage() {
 	ClientData *clientData;
 	SongData *songData;
 		
-	//Get control message from server
-	if (recv(Socket, messageBuffer, sizeof(ControlMessage), 0) == -1) {
+	//Get header from server
+	if (recv(Socket, messageBuffer, sizeof(int), 0) == -1) {
 		perror("recvServerMessage - Recv control message failed!");
 		return false;
 	}
-	controlMessage = (ControlMessage *)messageBuffer;
 
 	//manage server update or download response
-	switch (controlMessage->header)
+	switch (atoi(messageBuffer))
 	{
-	case SONG_LIST:
-		//recv all the songs from the server			
-		for (int i = 0; i < controlMessage->numOfSongs; i++) {
-			if (recv(Socket, messageBuffer, sizeof(SongData), 0) == -1) {
-				perror("recvServerMessage - Recv song data failed!");
-				return false;
-			}
-			songData = (SongData *)messageBuffer;	//extract song from buffer
-			songs.push_back(SongData());	//create a new song object in the vector
-			songs[i].SID = songData->SID;	//copy song id over
-			songs[i].artist = songData->artist;	//copy artist over
-			songs[i].title = songData->title;	//copy title over
+	case SONG_UPDATE:
+		if (recv(Socket, messageBuffer, sizeof(SongData) - sizeof(int), 0) == -1) {
+			perror("recvServerMessage - Recv control message failed!");
+			return false;
 		}
+		songData = (SongData *)messageBuffer;	//extract song from buffer
+		//songs.push_back(SongData());	//create a new song object in the vector
+		SongData recvSongData;
+		recvSongData.SID = songData->SID;	//copy song id over
+		sprintf_s(recvSongData.artist, STR_MAX_SIZE, "%s", songData->artist);
+		sprintf_s(recvSongData.title, STR_MAX_SIZE, "%s", songData->title);
+		songs.push_back(recvSongData);
 		break;
-	case CLIENT_LIST:
-		//recv all the clients names from the server
-		for (int i = 0; i < controlMessage->numOfClients; i++) {
-			if (recv(Socket, messageBuffer, sizeof(ClientData), 0) == -1) {
-				perror("recvServerMessage - Recv client data failed!");
-				return false;
-			}
-			clientData = (ClientData *)messageBuffer;	//extract client from buffer
-			clients.push_back(ClientData());	//create a new client object in the vector
-			clients[i].username = clientData->username;	//copy username over
-			clients[i].ip = clientData->ip;	//copy ip over
+	case CLIENT_UPDATE:
+		if (recv(Socket, messageBuffer, sizeof(ClientData) - sizeof(int), 0) == -1) {
+			perror("recvServerMessage - Recv control message failed!");
+			return false;
 		}
+		clientData = (ClientData *)messageBuffer;	//extract client from buffer
+		//clients.push_back(ClientData());	//create a new client object in the vector
+		ClientData recvClientData;
+		sprintf_s(recvClientData.username, STR_MAX_SIZE, "%s", clientData->username);
+		sprintf_s(recvClientData.ip, STR_MAX_SIZE, "%s", clientData->ip);
 		break;
 	case SONG_REQUEST:
 		//get file from server and save to disk

@@ -20,6 +20,8 @@ DWORD WINAPI microphoneStart(LPVOID lpParam) {
 		return 0;
 	}
 
+
+
 	// open wavein using Line In
 	if (player->OpenFile("wavein://src=line;volume=50;", sfAutodetect) == 0) {
 		perror("Microphone: Line in file failed!");
@@ -27,6 +29,7 @@ DWORD WINAPI microphoneStart(LPVOID lpParam) {
 		return 0;
 	}
 
+	//REPLACE WITH OUTSTREAM TO BUFFER
 	// set wave output to disk file, mp3 encoding, no playback
 	if (player->SetWaveOutFile(OUTPUT_FILE, sfMp3, 0) == 0)	{
 		perror("Microphone: ouput file failed!");
@@ -34,7 +37,12 @@ DWORD WINAPI microphoneStart(LPVOID lpParam) {
 		return 0;
 	}
 
-	// start playing
+
+	//set callback to intercept message (MsgStreamNeedMoreData)
+	//player->SetCallbackFunc(myCallbackFunc, (TCallbackMessage)MsgStreamNeedMoreData, );
+
+
+	// start playing from line-in
 	if (player->Play() == 0) {
 		perror("Microphone: Play failed!");
 		player->Release(); // delete ZPlay class
