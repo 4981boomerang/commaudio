@@ -400,12 +400,13 @@ bool recvServerMessage() {
 		perror("recvServerMessage - Recv control message failed!");
 		return false;
 	}
-
 	//manage server update or download response
-	switch (atoi(messageBuffer))
+	int* header = reinterpret_cast<int*>(messageBuffer);
+	//memcpy(&header, messageBuffer, sizeof(int));
+	switch (*header)
 	{
 	case SONG_UPDATE:
-		if (recv(Socket, messageBuffer, sizeof(SongData) - sizeof(int), 0) == -1) {
+		if (recv(Socket, messageBuffer + sizeof(int), sizeof(SongData) - sizeof(int), 0) == -1) {
 			perror("recvServerMessage - Recv control message failed!");
 			return false;
 		}
@@ -418,7 +419,7 @@ bool recvServerMessage() {
 		songs.push_back(recvSongData);
 		break;
 	case CLIENT_UPDATE:
-		if (recv(Socket, messageBuffer, sizeof(ClientData) - sizeof(int), 0) == -1) {
+		if (recv(Socket, messageBuffer + sizeof(int), sizeof(ClientData) - sizeof(int), 0) == -1) {
 			perror("recvServerMessage - Recv control message failed!");
 			return false;
 		}
