@@ -14,15 +14,19 @@
 #include <vector>
 #include "Microphone.h"
 
-#define DEFAULT_PORT	5555	
+#define DEFAULT_PORT	5000	
 #define WM_SOCKET		104
 #define PACKET_SIZE		1024
 #define MAX_THREADS		3
-#define DEFAULT_IP		"127.0.0.1"
+#define STR_MAX_SIZE	128
+#define STR_NAME		128
+
+#define DEFAULT_IP		"192.168.0.22"
 #define TEST_FILE		"06 - Little Wing.flac"
 
-#define SONG_LIST		1
-#define CLIENT_LIST		2
+
+#define SONG_UPDATE		1
+#define CLIENT_UPDATE	2
 #define SONG_REQUEST	3
 
 
@@ -38,14 +42,16 @@ typedef struct {
 } ControlMessage;
 
 typedef struct {
-	char* username;;
-	char* ip;
+	int header;
+	char username[STR_NAME];
+	char ip[STR_NAME];
 } ClientData;
 
 typedef struct {
+	int header;
 	int SID;
-	char* title;
-	char* artist;
+	char title[STR_MAX_SIZE];
+	char artist[STR_MAX_SIZE];
 } SongData;
 
 
