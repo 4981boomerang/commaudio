@@ -89,7 +89,7 @@ LRESULT CALLBACK ServerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 	{
 		wsprintf(temp, L"Socket failed with error %d", WSAGETSELECTERROR(lParam));
 		Display(temp);
-		CloseServer(sock);
+		//CloseServer(sock);
 		return 1;
 	}
 	switch (uMsg) {
@@ -158,7 +158,7 @@ LRESULT CALLBACK ServerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 		case FD_CLOSE:
 			wsprintf(temp, L"Closing socket %d\n", sock);
 			Display(temp);
-			//closesocket(sock);
+			closesocket(sock);
 			break;
 		}
 		break;
