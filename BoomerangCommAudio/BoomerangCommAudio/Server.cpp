@@ -109,18 +109,42 @@ LRESULT CALLBACK ServerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 
 			WSAAsyncSelect(sock, hwnd, WM_SOCKET_TCP, FD_READ | FD_CLOSE);
 
-			{
-				CONTROL_MSG msg;
-				msg.header = PH_NUM_OF_SONGS;
-				msg.msg = { 1 };
-				SocketInfo->DataBuf.buf = (char*)&msg;
+			{	// TODO: send the # of songs(control msg), the info of all songs separately, # of clients(control msg), info of all clients separately.
+				/*CONTROL_MSG msgNumSongs;
+				msgNumSongs.header = PH_NUM_OF_SONGS;
+				msgNumSongs.msg = { 1 };
+				SocketInfo->DataBuf.buf = (char*)&msgNumSongs;
 				SocketInfo->DataBuf.len = sizeof(CONTROL_MSG);
+				sendTCP(sock, SocketInfo);*/
+
+				INFO_SONG infoSong;
+				infoSong.header = PH_INFO_SONG;
+				infoSong.SID = 1;
+				sprintf_s(infoSong.title, PACKET_STR_MAX, "%s", "Title of a song");
+				sprintf_s(infoSong.artist, PACKET_STR_MAX, "%s", "Artist of a song");
+				SocketInfo->DataBuf.buf = (char*)&infoSong;
+				SocketInfo->DataBuf.len = sizeof(INFO_SONG);
+				sendTCP(sock, SocketInfo);
+
+				/*CONTROL_MSG msgNumClients;
+				msgNumClients.header = PH_NUM_OF_CLIENT;
+				msgNumClients.msg = { 1 };
+				SocketInfo->DataBuf.buf = (char*)&msgNumClients;
+				SocketInfo->DataBuf.len = sizeof(CONTROL_MSG);
+				sendTCP(sock, SocketInfo);*/
+
+				INFO_CLIENT infoClient;
+				infoClient.header = PH_INFO_CLIENT;
+				sprintf_s(infoClient.username, PACKET_STR_MAX, "%s", "luxes");
+				sprintf_s(infoClient.ip, IP_LENGTH, "%s", "192.168.0.22");
+				SocketInfo->DataBuf.buf = (char*)&infoClient;
+				SocketInfo->DataBuf.len = sizeof(INFO_CLIENT);
 				sendTCP(sock, SocketInfo);
 			}
 
 			break;
 		case FD_CLOSE:
-			CloseServer(sock);
+			//CloseServer(sock);
 			break;
 		}
 		break;
@@ -134,7 +158,7 @@ LRESULT CALLBACK ServerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 		case FD_CLOSE:
 			wsprintf(temp, L"Closing socket %d\n", sock);
 			Display(temp);
-			closesocket(sock);
+			//closesocket(sock);
 			break;
 		}
 		break;

@@ -98,6 +98,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	CheckDlgButton(g_hMainDlg, IDC_RADIO_SERVER, TRUE);
 	CheckDlgButton(g_hMainDlg, IDC_RADIO_IP, TRUE);
+	CheckDlgButton(g_hMainDlg, IDC_RADIO_TCP, TRUE);
 
 	GetDlgItems();
 	SetEnableDlgItems(TRUE);
