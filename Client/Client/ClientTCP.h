@@ -17,7 +17,7 @@
 #define DEFAULT_PORT	5000	
 #define WM_SOCKET		104
 #define PACKET_SIZE		1024
-#define MAX_THREADS		3
+#define MAX_THREADS		10
 #define STR_MAX_SIZE	128
 #define STR_NAME		128
 
@@ -25,13 +25,13 @@
 #define TEST_FILE		"06 - Little Wing.flac"
 
 
-#define SONG_UPDATE		1
-#define CLIENT_UPDATE	2
-#define SONG_REQUEST	3
+#define SONG_UPDATE				1
+#define CLIENT_UPDATE			2
+#define SONG_REQUEST			3
+#define CLIENT_MIC_CONNECTION	4
 
 
-
-
+//deprecated
 typedef struct {
 	int header;
 	union {
@@ -56,12 +56,10 @@ typedef struct {
 
 
 LRESULT CALLBACK Idle(HWND, UINT, WPARAM, LPARAM);
-DWORD WINAPI command(LPVOID lpParam);
 DWORD WINAPI recvCommand(LPVOID lpParam);
 DWORD WINAPI connect(LPVOID lpParam);
-bool uploadFile();
-bool downloadFile();
-bool recvServerMessage();
+DWORD WINAPI uploadFile(LPVOID lpParam);
+DWORD WINAPI downloadFile(LPVOID lpParam);
 
 static TCHAR Name[] = TEXT("COMM Audio Client");
 HWND hwnd;
@@ -71,6 +69,7 @@ HANDLE  hThreadArray[MAX_THREADS];
 DWORD dwThreadIdArray[MAX_THREADS];
 std::vector<SongData> songs;
 std::vector<ClientData> clients;
+int numberOfThreads;
 
 
 

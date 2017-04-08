@@ -39,7 +39,7 @@ DWORD WINAPI microphoneStart(LPVOID lpParam) {
 
 
 	//set callback to intercept message (MsgStreamNeedMoreData)
-	//player->SetCallbackFunc(myCallbackFunc, (TCallbackMessage)MsgStreamNeedMoreData, );
+	player->SetCallbackFunc(myCallbackFunc, (TCallbackMessage)MsgStreamNeedMoreData, player->Play);
 
 
 	// start playing from line-in
@@ -51,3 +51,29 @@ DWORD WINAPI microphoneStart(LPVOID lpParam) {
 
 	return 0;
 }
+
+
+int  __stdcall  myCallbackFunc(void* instance, void *user_data, TCallbackMessage message, unsigned int param1, unsigned int param2)
+{
+	ZPlay *myplayer = (ZPlay*)instance;
+
+	switch (message)
+	{
+	case MsgStreamNeedMoreData: // stream needs more data
+	{
+		FILE *in = (FILE*)user_data; // this parameter is set by SetCallbackFunc
+
+									 // read next chunk of data from file into memory buffer
+		char buffer[10000];
+		unsigned int read = fread(buffer, 1, 10000, in);
+
+		// push this memory buffer into stream
+		myplayer->PushDataToStream(buffer, read);
+	}
+	return 0;
+	}
+
+	return 0;
+}
+
+
