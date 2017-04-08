@@ -119,19 +119,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CBuff.cpp" />
-    <ClCompile Include="Client.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Packetizer.cpp" />
     <ClCompile Include="Server.cpp" />
     <ClCompile Include="SocketWrappers.cpp" />
+    <ClCompile Include="WinTimer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CBuff.h" />
-    <ClInclude Include="Client.h" />
     <ClInclude Include="Packetizer.h" />
     <ClInclude Include="Semaphore.h" />
     <ClInclude Include="Server.h" />
     <ClInclude Include="SocketWrappers.h" />
+    <ClInclude Include="WinTimer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

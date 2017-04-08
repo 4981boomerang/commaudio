@@ -30,6 +30,7 @@
 -- NOTES:
 -- Circular Buffer class that uses 
 ------------------------------------------------------------------------------*/
+#pragma once
 #include <array>
 #include <mutex>
 #include <memory>
@@ -37,10 +38,11 @@
 #include "Node.h"
 #include "Semaphore.h"
 
-#ifndef CBUFF_H
-#define CBUFF_H
+//#ifndef CBUFF_H
+//#define CBUFF_H
 
-#define DEFAULT_SIZE 128 
+#define DEFAULT_CBUFF_SIZE 128 
+#define DEFAULT_CHARARR_SIZE 1024
 
 class CBuff
 {
@@ -50,27 +52,27 @@ public:
 	~CBuff();
 
 	void empty();
-	void push_back(std::string str);
-	std::string & pop();
-	const std::string & peek() const;
+	void push_back(char * str);
+	char * pop();
+	//const unique_ptr<char[]> & peek() const;
 	
-	std::string & operator[] (int x);
-	const std::string & operator[] (int x) const;
+	//char * operator[] (int x);
+	//const char * operator[] (int x) const;
 
-	unsigned int getCapacity() const;
+	unsigned int getCapacity() const { return _capacity; };
 	bool isReadyForRead(double percentage = 0.5) const;
 
 private:
 	int _buffSize;
 	int _maxSize;
 	int _capacity;
-	std::array<std::string, DEFAULT_SIZE> _buff;
+	std::array<char [DEFAULT_CHARARR_SIZE], DEFAULT_CBUFF_SIZE> _buff;
 	unsigned int _head;
 	unsigned int _tail;
 	Semaphore _semHead, _semTail;
 
 	unsigned int checkFull() const;
 };
-
-#endif 
+//
+//#endif 
 
