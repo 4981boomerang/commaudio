@@ -141,12 +141,41 @@ int WinTimer::resetTimer()
 {
 	if (!SetWaitableTimer(timer, &dueTime, reset, NULL, NULL, 0))
 	{
-		printf("SetWaitableTimer failed (%d)\n", GetLastError());
+		std::cout << "SetWaitableTimer failed: " 
+			<< GetLastError() << endl;
 		return 1;
 	}
 	return 0;
 }
 
+/*--------------------------------------------------------------------------
+-- FUNCTION: cancelTimer
+--
+-- DATE: APR. 07, 2017
+--
+-- REVISIONS:
+-- Version 1.0 - [EY] - 2016/APR/07 - Created Function
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE: void cancelTimer ()
+--
+-- NOTES:
+-- stops the timer from running
+--------------------------------------------------------------------------*/
+
+int WinTimer::cancelTimer()
+{
+	if (!CancelWaitableTimer(timer))
+	{
+		std::cout << "CancelWaitableTimer failed: " 
+			<< GetLastError() << endl;
+		return 1;
+	}
+	return 0;
+}
 /*--------------------------------------------------------------------------
 -- FUNCTION: makeWinTimer
 --

@@ -39,7 +39,6 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 
-
 #define BACKLOG 5
 #define PORT 13456
 #define PORT_STR  "13456"

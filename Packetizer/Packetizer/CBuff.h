@@ -30,6 +30,7 @@
 -- NOTES:
 -- Circular Buffer class that uses 
 ------------------------------------------------------------------------------*/
+#pragma once
 #include <array>
 #include <mutex>
 #include <memory>
@@ -37,8 +38,8 @@
 #include "Node.h"
 #include "Semaphore.h"
 
-#ifndef CBUFF_H
-#define CBUFF_H
+//#ifndef CBUFF_H
+//#define CBUFF_H
 
 #define DEFAULT_CBUFF_SIZE 128 
 #define DEFAULT_CHARARR_SIZE 1024
@@ -55,8 +56,8 @@ public:
 	char * pop();
 	//const unique_ptr<char[]> & peek() const;
 	
-	char * operator[] (int x);
-	const char * operator[] (int x) const;
+	//char * operator[] (int x);
+	//const char * operator[] (int x) const;
 
 	unsigned int getCapacity() const { return _capacity; };
 	bool isReadyForRead(double percentage = 0.5) const;
@@ -72,6 +73,6 @@ private:
 
 	unsigned int checkFull() const;
 };
-
-#endif 
+//
+//#endif 
 

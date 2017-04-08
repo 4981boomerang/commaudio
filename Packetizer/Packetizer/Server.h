@@ -1,6 +1,8 @@
 #pragma once
 
 #include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
 #include <mutex>
 #include <map>
 #include <queue>
@@ -13,7 +15,7 @@
 
 
 #define BUFFSIZE 1024
-#define PORT 8123
+#define PORTNO 5001
 #define MCAST_IP "295.99.99.09"
 #define TEMP_IP "192.168.0.36"
 
@@ -45,13 +47,21 @@ private:
 	void streamSendLoop();
 	void streamPackLoop();
 	std::map <int,std::string> playlist; // the library
-	
+
+	std::thread streamSend() {
+		return std::thread([this] { this->streamSendLoop(); });
+	};
+
+	std::thread streamPack() {
+		return std::thread([this] { this->streamPackLoop(); });
+	};
+
 	// Map of different types of libraries 
 	// SOCKET sockTCP;	
 	SOCKET sockUDP;
 	WinTimer timer;
-	std::thread streamSend;
-	std::thread streamPack;
+	std::thread sendThread;
+	std::thread packThread;
 	SoundFilePacketizer packer;
 	CBuff cbuff;
 	bool isStreaming;

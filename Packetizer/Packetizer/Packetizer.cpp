@@ -75,10 +75,12 @@ SoundFilePacketizer::~SoundFilePacketizer()
 --------------------------------------------------------------------------*/
 char * SoundFilePacketizer::getNextPacket()
 {
-	if (static_cast<unsigned int>(packindex) < vPack.size() )
+	if (static_cast<unsigned int>(packindex) < vPack.size())
 	{
 		return vPack[packindex++];
 	}
+	else
+		return nullptr;
 }
 
 /*--------------------------------------------------------------------------
@@ -155,9 +157,9 @@ int SoundFilePacketizer::getLastPackSize()
 --------------------------------------------------------------------------*/
 void SoundFilePacketizer::clearVector()
 {
-	for (int i = 0; i < vPack.size(); ++i)
+	for (size_t i = 0; i < vPack.size(); ++i)
 	{
-		delete[] vPack[i];
+		free(vPack[i]);
 		vPack[i] = NULL;
 	}
 	filesize = 0;
@@ -209,7 +211,7 @@ void SoundFilePacketizer::makePacketsFromFile(const char * fpath)
 	while (!feof(fp))
 	{
 	
-		char * buff = new char[packsize]();
+		char * buff = static_cast<char *>(malloc(DEFAULT_PACKSIZE));
 		read = fread(static_cast<void *>(buff), sizeof(char), packsize, fp);
 		if (ferror(fp))
 		{
@@ -218,6 +220,7 @@ void SoundFilePacketizer::makePacketsFromFile(const char * fpath)
 			fclose(fp);
 		}
 		vPack.push_back(buff);
+		buff = nullptr;
 	}
 	closeFile();
 }
@@ -248,7 +251,8 @@ void SoundFilePacketizer::openFile(const char * fpath)
 {
 	if ((fopen_s(&fp, fpath, "rb")) != 0)
 	{
-		cerr << "fopen Failed Error: " << errno << endl;
+		cerr << "fopen Failed Error: " << 
+			GetLastError() << endl;
 	}
 }
 
@@ -278,7 +282,8 @@ void SoundFilePacketizer::closeFile()
 {
 	if (fclose(fp) != 0)
 	{
-		std::cerr << "fclose Failed Error: " << GetLastError();
+		std::cerr << "fclose Failed Error: " 
+			<< GetLastError() << endl;
 		return;
 	}
 	fp = NULL;
@@ -309,13 +314,13 @@ void SoundFilePacketizer::calcFileSize()
 {
 	if (fseek(fp, 0, SEEK_END) != 0)
 	{
-		cerr << "Error on fseek. " << GetLastError();
+		cerr << "Error on fseek. " << GetLastError() << endl;
 		return;
 	}
 
 	if ((filesize = ftell(fp)) < 0)
 	{
-		cerr << "Error on ftell. " << GetLastError();
+		cerr << "Error on ftell. " << GetLastError() << endl;
 		rewind(fp);
 		return;
 	}
