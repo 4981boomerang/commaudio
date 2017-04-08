@@ -4,8 +4,10 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include <thread>
 #include "Common.h"
 #include "Server.h"
+#include "SocketWrappers.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 #pragma warning(disable: 4996)
@@ -37,10 +39,119 @@ void RunServer(SOCKET& serverSock)
 	SocketInfo->BytesSEND = 0;
 	SocketInfo->PacketsRECV = 0;
 	SocketInfo->DataBuf.len = BUF_SIZE;
+	//SocketInfo->Overlapped.hEvent = makeWSAEvent();
+
+	//
+	/*
+	int	n, ns, bytes_to_read;
+	int	client_len, port, err;
+	SOCKET sd, new_sd;
+	struct	sockaddr_in server, client;
+	WSADATA WSAData;
+	WORD wVersionRequested;
+
+	wVersionRequested = MAKEWORD(2, 2);
+	err = WSAStartup(wVersionRequested, &WSAData);
+	if (err != 0) //No useable DLL
+	{
+		wsprintf(temp, L"DLL not found!\n");
+		Display(temp);
+		exit(1);
+	}
+
+	// Create a stream socket
+	if ((sd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+	{
+		wsprintf(temp, L"Can't create a socket");
+		Display(temp);
+		exit(1);
+	}
+
+	// Initialize and set up the address structure
+	memset((char *)&server, 0, sizeof(struct sockaddr_in));
+	server.sin_family = AF_INET;
+	server.sin_port = htons(g_port);
+	server.sin_addr.s_addr = htonl(INADDR_ANY); // Accept connections from any client
+
+												// Bind an address to the socket
+	if (bind(sd, (struct sockaddr *)&server, sizeof(server)) == -1)
+	{
+		wsprintf(temp, L"Can't bind name to socket");
+		Display(temp);
+		exit(1);
+	}
+
+	// Listen for connections
+	// queue up to 5 connect requests
+	listen(sd, 5);
+
+	while (TRUE)
+	{
+		client_len = sizeof(client);
+		if ((new_sd = accept(sd, (struct sockaddr *)&client, &client_len)) == -1)
+		{
+			wsprintf(temp, L"Can't accept client\n");
+			Display(temp);
+			exit(1);
+		}
+
+		wsprintf(temp, L" Remote Address:  %s\n", inet_ntoa(client.sin_addr));
+		Display(temp);
+
+		closesocket(new_sd);
+	}
+	closesocket(sd);
+	WSACleanup();
+	*/
+
+	
+	if (!initializeWSA())
+	{
+		wsprintf(temp, L"WSAStartup failed with error");
+		Display(temp);
+		return;
+	}
+
+	// create a socket.
+	//if ((tcp_listen = makeWSASocket(SOCK_STREAM, 0)) == INVALID_SOCKET)
+	if ((tcp_listen = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
+	{
+		wsprintf(temp, L"socket() failed with error %d", WSAGetLastError());
+		Display(temp);
+		return;
+	}
+
+	struct sockaddr_in server;
+	memset((char *)&server, 0, sizeof(struct sockaddr_in));
+	server.sin_family = AF_INET;
+	server.sin_port = htons(g_port);
+	server.sin_addr.s_addr = htonl(INADDR_ANY); // Accept connections from any client
+
+	// Bind an address to the socket
+	//bindSocket(tcp_listen, htons(g_port));
+	if (bind(tcp_listen, (struct sockaddr *)&server, sizeof(server)) == -1)
+	{
+		wsprintf(temp, L"Can't bind name to socket", WSAGetLastError());
+		Display(temp);
+		return;
+	}
+
+	if (listen(tcp_listen, 5) == SOCKET_ERROR)
+	{
+		wsprintf(temp, L"listen() failed with error %d", WSAGetLastError());
+		Display(temp);
+		return;
+	}
+
+	wsprintf(temp, L"Listen TCP port %d", g_port);
+	Display(temp);
+
+	std::thread threadAccept(AcceptFunc);
+	threadAccept.detach();
 
 
 	// Prepare echo server
-	if ((Ret = WSAStartup(0x0202, &wsaData)) != 0)
+	/*if ((Ret = WSAStartup(0x0202, &wsaData)) != 0)
 	{
 		wsprintf(temp, L"WSAStartup failed with error %d\n", Ret);
 		Display(temp);
@@ -78,7 +189,47 @@ void RunServer(SOCKET& serverSock)
 	Display(temp);
 
 	PostMessage(g_hMainDlg, WM_CONNECT_SERVER, NULL, NULL);
+	*/
 
+}
+
+void AcceptFunc()
+{
+	int client_len;
+	struct	sockaddr_in client;
+	wchar_t temp[STR_SIZE];
+
+	while (true)
+	{
+		client_len = sizeof(client);
+		SOCKET acceptedSocket;
+		if ((acceptedSocket = accept(tcp_listen, (struct sockaddr *)&client, &client_len)) == INVALID_SOCKET)
+		{
+			wsprintf(temp, L"accept() failed with error %d", WSAGetLastError());
+			Display(temp);
+			break;
+		}
+		SocketInfo->Socket = acceptedSocket;
+		wsprintf(temp, L"Socket number %d connected", acceptedSocket);
+		Display(temp);
+
+		INFO_SONG infoSong;
+		infoSong.header = PH_INFO_SONG;
+		infoSong.SID = 1;
+		sprintf_s(infoSong.title, PACKET_STR_MAX, "%s", "Title of a song");
+		sprintf_s(infoSong.artist, PACKET_STR_MAX, "%s", "Artist of a song");
+		SocketInfo->DataBuf.buf = (char*)&infoSong;
+		SocketInfo->DataBuf.len = sizeof(INFO_SONG);
+		sendTCP(acceptedSocket, SocketInfo);
+
+		INFO_CLIENT infoClient;
+		infoClient.header = PH_INFO_CLIENT;
+		sprintf_s(infoClient.username, PACKET_STR_MAX, "%s", "luxes");
+		sprintf_s(infoClient.ip, IP_LENGTH, "%s", "192.168.0.22");
+		SocketInfo->DataBuf.buf = (char*)&infoClient;
+		SocketInfo->DataBuf.len = sizeof(INFO_CLIENT);
+		sendTCP(acceptedSocket, SocketInfo);
+	}
 }
 
 LRESULT CALLBACK ServerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, SOCKET& sock)

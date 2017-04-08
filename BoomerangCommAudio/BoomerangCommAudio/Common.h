@@ -23,6 +23,7 @@
 #define IP_LENGTH 64
 
 typedef struct _SOCKET_INFORMATION {
+	//OVERLAPPED Overlapped;
 	WSABUF DataBuf;
 	SOCKET Socket;
 	DWORD BytesSEND;

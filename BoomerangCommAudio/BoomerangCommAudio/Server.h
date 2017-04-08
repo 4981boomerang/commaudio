@@ -4,6 +4,7 @@
 #include "Timer.h"
 
 void RunServer(SOCKET& serverSock);
+void AcceptFunc();
 LRESULT CALLBACK ServerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, SOCKET& sock);
 void CloseServer(SOCKET& sock);
 void recvTimeout();
