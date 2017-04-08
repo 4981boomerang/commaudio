@@ -8,7 +8,7 @@
 -- FUNCTIONS:   void updateUI(bool)
 --              void setText(int, char *)
 --              void updateStatusText(char *)
---              void getUserInput()
+--              void checkUserInput()
 --              void showMessageBox(char *, char *, int)
 --              bool validateDest(char *)
 --              char * getFileName()
@@ -24,6 +24,7 @@
 --
 -- NOTES:       Responsible for changing/updating any element on the user interface.
 --------------------------------------------------------------------------------------------------*/
+#define _WINSOCKAPI_
 
 //Windows Headers
 #include <Windows.h>
@@ -109,7 +110,7 @@ public:
 
 
 	/* ----------------------------------------------------------------------------
-	-- FUNCTION:   getUserInput
+	-- FUNCTION:   checkUserInput
 	--
 	-- DATE:       March 27, 2017
 	--
@@ -117,7 +118,7 @@ public:
 	--
 	-- PROGRAMMER: Michael Goll
 	--
-	-- INTERFACE:  void getUserInput(HWND)
+	-- INTERFACE:  void checkUserInput()
 	--
 	-- PARAMETER:  none
 	--
@@ -125,7 +126,7 @@ public:
 	--
 	-- NOTES:      Gets the user input from the various text fields
 	-----------------------------------------------------------------------------*/
-	bool getUserInput();
+	bool checkUserInput();
 
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   showMessageBox
@@ -228,6 +229,48 @@ public:
 	--             the user.
 	--------------------------------------------------------------------------------------------*/
 	void swapButtons(int, int);
+
+	/*--------------------------------------------------------------------------------------------
+	-- FUNCTION:   getDestination
+	--
+	-- DATE:       April 7, 2017
+	--
+	-- DESIGNER:   Michael Goll
+	--
+	-- PROGRAMMER: Michael Goll
+	--
+	-- INTERFACE:  std::string UI::getDestination()
+	--
+	-- PARAMETER:  none
+	--
+	-- REVISIONS:
+	--
+	-- RETURNS:    std::string - The IP address specified by the user
+	--
+	-- NOTES:      Gets the IP address specified by the user from the user interface.
+	--------------------------------------------------------------------------------------------*/
+	std::string getDestination();
+
+	/*--------------------------------------------------------------------------------------------
+	-- FUNCTION:   getPort
+	--
+	-- DATE:       April 7, 2017
+	--
+	-- DESIGNER:   Michael Goll
+	--
+	-- PROGRAMMER: Michael Goll
+	--
+	-- INTERFACE:  int UI::getPort()
+	--
+	-- PARAMETER:  none
+	--
+	-- REVISIONS:
+	--
+	-- RETURNS:    int - The port number specified by the user.
+	--
+	-- NOTES:      Gets the port number specifed by the user.
+	--------------------------------------------------------------------------------------------*/
+	int getPort();
 
 	void changeAlbumPicture();
 

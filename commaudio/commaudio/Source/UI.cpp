@@ -11,6 +11,8 @@
 --              bool validateDest(char *)
 --              char * getFileName(HWND)
 --              void swapButtons(int, int)
+--              std::string getDestination()
+--              int getPort()
 --
 -- DATE:        March 27, 2017
 --
@@ -93,7 +95,7 @@ void UI::updateStatusText(char * message) {
 
 
 /* ----------------------------------------------------------------------------
--- FUNCTION:   getUserInput
+-- FUNCTION:   checkUserInput
 --
 -- DATE:       March 27, 2017
 --
@@ -109,7 +111,7 @@ void UI::updateStatusText(char * message) {
 --
 -- NOTES:      Gets the user input from the various text fields
 -----------------------------------------------------------------------------*/
-bool UI::getUserInput() {
+bool UI::checkUserInput() {
 	char dest[32], port[32], pNum[32], pSize[32];
 	int inputSize = 32;
 	int portNum, packNum, packSize;
@@ -125,9 +127,6 @@ bool UI::getUserInput() {
 		showMessageBox("Port number is empty, please specify a port number", "Port Number Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
-
-	portNum = atoi(port);
-	swapButtons(IDC_CONNECT, IDC_DISCONNECT);
 
 	return true;
 }
@@ -288,6 +287,58 @@ void UI::swapButtons(int btnToHide, int btntoShow) {
 	ShowWindow(GetDlgItem(hDlg, btntoShow), TRUE);
 }
 
+/*--------------------------------------------------------------------------------------------
+-- FUNCTION:   getDestination
+--
+-- DATE:       April 7, 2017
+--
+-- DESIGNER:   Michael Goll
+--
+-- PROGRAMMER: Michael Goll
+--
+-- INTERFACE:  std::string UI::getDestination()
+--
+-- PARAMETER:  none
+--
+-- REVISIONS:  
+--
+-- RETURNS:    std::string - The IP address specified by the user
+--
+-- NOTES:      Gets the IP address specified by the user from the user interface.
+--------------------------------------------------------------------------------------------*/
+std::string UI::getDestination() {
+	char dest[15];
+	GetDlgItemText(hDlg, IDC_IP, dest, sizeof(dest));
+	return dest;
+}
+
+/*--------------------------------------------------------------------------------------------
+-- FUNCTION:   getPort
+--
+-- DATE:       April 7, 2017
+--
+-- DESIGNER:   Michael Goll
+--
+-- PROGRAMMER: Michael Goll
+--
+-- INTERFACE:  int UI::getPort()
+--
+-- PARAMETER:  none
+--
+-- REVISIONS:
+--
+-- RETURNS:    int - The port number specified by the user.
+--
+-- NOTES:      Gets the port number specifed by the user.
+--------------------------------------------------------------------------------------------*/
+int UI::getPort() {
+	char port[15];
+	GetDlgItemText(hDlg, IDC_PORT, port, sizeof(port));
+	return atoi(port);
+}
+
 void UI::changeAlbumPicture() {
 
 }
+
+

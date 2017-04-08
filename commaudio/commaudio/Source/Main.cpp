@@ -32,6 +32,8 @@
 
 //Custom Headers
 #include "../Headers/Main.h"
+#include "../Headers/Network.h"
+#include "../Headers/UI.h"
 
 /*-----------------------------------------------------------------------------------------------
 -- FUNCTION:   DialogProc
@@ -58,9 +60,10 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	HDC hdc = (HDC)wParam;
 	UI ui(hDlg);
+	Network networkManager(&ui);
 
 	//connection thread
-	HANDLE bgThread = NULL;
+	HANDLE bgTCPThread = NULL, bgUDPThread = NULL;
 
 	switch (uMsg)
 	{
@@ -97,15 +100,23 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case IDC_CONNECT:
-			if (ui.getUserInput())
-				; //connect here
-			//construct the audioplayer
+			if (ui.checkUserInput()) {
+				std::string dest = ui.getDestination();
+				int port = ui.getPort();
+				networkManager.setIP(dest);
+				networkManager.setPort(port);
+				networkManager.clientStart();
+
+				networkManager.startTCP();
+				networkManager.startUDP();
+			}
 
 			break;
 
 		case IDC_DISCONNECT:
 			//disconnect here, network cleanup
 			ui.swapButtons(IDC_DISCONNECT, IDC_CONNECT);
+			networkManager.clientStop(TRUE, TRUE);
 			break;
 
 		case IDC_CHOOSEFILE:
@@ -144,8 +155,11 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	case WM_CLOSE:
 		//terminate running thread if it exists
-		if (bgThread != NULL)
-			TerminateThread(bgThread, 0);
+		if (bgTCPThread != NULL)
+			TerminateThread(bgTCPThread, 0);
+
+		if (bgUDPThread != NULL)
+			TerminateThread(bgUDPThread, 0);
 		
 		//cleanup network stuff just in case
 		WSACleanup();
