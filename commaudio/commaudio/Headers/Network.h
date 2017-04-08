@@ -82,10 +82,10 @@ public:
 private:
 	//0 --> TCP | 1 --> UDP
 	SOCKET tcpSocket, udpSocket;
-	sockaddr_in serverAddr = { 0 };
+	sockaddr_in serverAddr;
 	WSAOVERLAPPED tcpOL, udpOL;
 	WSADATA wsadata;
-	WSABUF sendBufUDP, sendBufTCP, rcvBufUDP;
+	WSABUF sendBufUDP, sendBufTCP, rcvBufUDP, rcvBufTCP;
 	WORD wVersionRequested;
 	bool udpRunning, tcpRunning;
 	char * dest;

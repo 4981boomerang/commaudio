@@ -115,6 +115,7 @@
     <ClInclude Include="Headers\libzplay.h" />
     <ClInclude Include="Headers\Main.h" />
     <ClInclude Include="Headers\AudioPlayer.h" />
+    <ClInclude Include="Headers\Microphone.h" />
     <ClInclude Include="Headers\Network.h" />
     <ClInclude Include="Headers\Node.h" />
     <ClInclude Include="Headers\Semaphore.h" />
@@ -125,6 +126,7 @@
     <ClCompile Include="Source\CBuff.cpp" />
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\AudioPlayer.cpp" />
+    <ClCompile Include="Source\Microphone.cpp" />
     <ClCompile Include="Source\Network.cpp" />
     <ClCompile Include="Source\UI.cpp" />
   </ItemGroup>

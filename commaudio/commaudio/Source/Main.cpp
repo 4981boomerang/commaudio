@@ -107,8 +107,8 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				networkManager.setPort(port);
 				networkManager.clientStart();
 
-				networkManager.startTCP();
-				networkManager.startUDP();
+				networkManager.startTCP(); //need to put in a background thread
+				networkManager.startUDP(); //need to put in a background thread
 			}
 
 			break;
@@ -142,6 +142,10 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case IDC_PREV:
+			break;
+
+		case IDC_CALL:
+			//spawn microphone thread here
 			break;
 
 		}

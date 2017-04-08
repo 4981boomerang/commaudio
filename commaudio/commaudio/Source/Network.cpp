@@ -19,7 +19,8 @@
 --
 -- NOTES:         Creates the network object and initializes member variables.
 -----------------------------------------------------------------------------------*/
-Network::Network(UI * uiOrig) : wVersionRequested(MAKEWORD(2, 2)), sendBufTCP{ 0 }, sendBufUDP{ 0 }, tcpRunning(FALSE), udpRunning(FALSE), ui(uiOrig) {
+Network::Network(UI * uiOrig) : serverAddr{ 0 }, wsadata{ 0 }, sendBufTCP{ 0 }, sendBufUDP{ 0 }, rcvBufUDP{ 0 }, rcvBufTCP{ 0 },
+		wVersionRequested(MAKEWORD(2, 2)), tcpRunning(FALSE), udpRunning(FALSE), ui(uiOrig) {
 	//initialize overlapped structures
 	memset(&tcpOL, 0, sizeof(WSAOVERLAPPED));
 	memset(&udpOL, 0, sizeof(WSAOVERLAPPED));
@@ -185,7 +186,7 @@ void Network::startTCP() {
 }
 
 /*---------------------------------------------------------------------------------
--- FUNCTION:	  startTCP
+-- FUNCTION:	  startUDP
 --
 -- DATE:		  April 7, 2017
 --
