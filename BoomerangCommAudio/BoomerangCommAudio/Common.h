@@ -19,8 +19,11 @@
 #define DEFAULT_PAC_TIMES 100
 #define STR_SIZE 512
 #define BUF_SIZE 100000
+#define PACKET_STR_MAX 128
+#define IP_LENGTH 64
 
 typedef struct _SOCKET_INFORMATION {
+	//OVERLAPPED Overlapped;
 	WSABUF DataBuf;
 	SOCKET Socket;
 	DWORD BytesSEND;
@@ -36,7 +39,10 @@ typedef struct _SOCKET_INFORMATION {
 
 enum PACKET_HEADER
 {
-	PH_NUM_OF_SONGS = 1,
+	PH_INFO_SONG = 1,
+	PH_INFO_CLIENT,
+
+	PH_NUM_OF_SONGS,
 	PH_NUM_OF_CLIENT,
 	PH_SID,
 
@@ -53,6 +59,21 @@ typedef struct _CONTROL_MSG
 		int SID;
 	} msg;
 } CONTROL_MSG, *LPCONTROL_MSG;
+
+typedef struct _INFO_SONG
+{
+	int header;
+	int SID;
+	char title[PACKET_STR_MAX];
+	char artist[PACKET_STR_MAX];
+} INFO_SONG, *LPINFO_SONG;
+
+typedef struct _INFO_CLIENT
+{
+	int header;
+	char username[PACKET_STR_MAX];
+	char ip[IP_LENGTH];
+} INFO_CLIENT, *LPINFO_CLIENT;
 
 extern HWND g_hWnd;
 extern HWND g_hMainDlg;

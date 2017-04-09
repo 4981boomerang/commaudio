@@ -1,195 +1,366 @@
 
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-
 #include <iostream>
 #include <string.h>
 #include <thread>
+#include <iterator>
 
 #include "Server.h"
-#include "CBuff.h"
-#include "Packetizer.h"
-#include "SocketWrappers.h"
 
 using namespace std;
 
-void pushloop(CBuff &cbuff, SoundFilePacketizer & packer);
-int createWaitableTimer(HANDLE &timer);
-int setTimer(HANDLE &timer, const LARGE_INTEGER &dueTime, const long reset = 500);
-
 /*--------------------------------------------------------------------------
--- FUNCTION: runServer
+-- FUNCTION: Server
 --
--- DATE: Apr. 03, 2017
+-- DATE: APR. 09, 2017
 --
 -- REVISIONS: 
--- Version 1.0 - [EY] - 2016/Apr/03 - comment add 
+-- Version 1.0 - [EY] - 2016/APR/09 - Comment Added 
 --
 -- DESIGNER: Eva Yu
 --
 -- PROGRAMMER: Eva Yu
 --
--- INTERFACE: int runServer (char * ipaddr, int numPacks, int timeinterval)
--- char * ipaddr -- the ip address to send to ( to be changed to multicast )
--- int numPacks -- the number of packets to send for testing 
--- int timeinterval --the time ( in milliseconds ) between each packet being sent
+-- INTERFACE:  Server ()
+--
+-- NOTES:
+-- Ctor
+--------------------------------------------------------------------------*/
+Server::Server()
+	:isStreaming(false)
+{
+	initializeWSA();
+	// load map of songs
+	sockUDP = makeWSASocket(SOCK_DGRAM, 0);
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: Server
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS: 
+-- Version 1.0 - [EY] - 2016/APR/09 - Comment Added 
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE:  Server ()
+--
+-- NOTES:
+-- Dtor
+--------------------------------------------------------------------------*/
+Server::~Server()
+{
+	if (isStreaming)
+		stopStream();
+
+	closeWSA();
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: startStream
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS: 
+-- Version 1.0 - [EY] - 2016/APR/09 - Comment added 
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE: void startStream ()
+--  desc
+--
+-- RETURNS: 
+-- RETURN
+--
+-- NOTES:
+-- Starts the UDP Streaming of songs. 
+-- creates a thread for packetizatio and a thread for streaming 
+-- **** make sure the Library is loaded when calling start stream !
+--------------------------------------------------------------------------*/
+void Server::startStream()
+{
+
+	// get file name library
+	isStreaming = true;
+	// make threads for streaming 1 for pack , 1 for send
+	packThread = streamPack();
+	sendThread = streamSend();
+
+	return;
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: loadLibrary
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS: 
+-- Version 1.0 - [EY] - 2016/APR/09 - Commented the code 
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE:  loadLibrary (const char * libpath)
+-- const char * libpath : The path the the directory of the library
+--							The deafult for the path is in server.h 
+--
+--
+-- NOTES:
+-- This function loads  all the mp3 files found in the folder
+-- * Future versions may also extend to .wav , .flac , etc . 
+--------------------------------------------------------------------------*/
+void Server::loadLibrary(const char * libpath)
+{
+	// look for mp3 files only
+	static const char * rgx = "*.mp3";
+
+	// if library has already been loaded, 
+	if (playlist.size() != 0)
+	{
+		if (isStreaming) //you must stop streaming first!
+		{
+			cerr << "Streaming must stop before loading library."
+				<< endl;
+			return;
+		}
+		else {
+			playlist.clear();
+		}
+	}
+	
+	int sid = 0; // song id assiocated with map 
+	string path = "";
+	(path = libpath).append(rgx);
+	WIN32_FIND_DATA winfd;
+	HANDLE hFind = FindFirstFile(path.c_str(), &winfd);
+	if (hFind != INVALID_HANDLE_VALUE) { 
+		
+		do {
+			// if it is a file and not a directory
+			if (!(winfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+				// add file path and name of file to map
+				(playlist[sid++] = libpath).append(winfd.cFileName);
+			}
+		} while (FindNextFile(hFind, &winfd));
+		FindClose(hFind);
+	}
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: stopStream
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS: 
+-- Version 1.0 - [EY] - 2016/APR/09 - Commented  
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE: void stopStream ()
+--  
+--
+-- RETURNS: 
+--
+-- NOTES:
+-- called when the streaming wants to be aborted entirely ( Note, this is not a pause )
+--------------------------------------------------------------------------*/
+void Server::stopStream()
+{
+	isStreaming = false;
+	//join thread stream Send Loop
+	sendThread.join();
+	packThread.join();
+	//join thread Stream Pack Loop
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: streamPackLoop
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS: 
+-- Version 1.0 - [EY] - 2016/APR/09 - Comment added 
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE: void streamPackLoop ()
+--  
+--
+-- NOTES:
+-- this is a the thread loop for 
+-- thread will exit when somone stops streaming 
+-- Continuously loop through the map of songs ( loop back play )
+-- and packetize each song 
+-- Once the cBuff has the last packet of the song, the next song will 
+-- be packetized. 
+--------------------------------------------------------------------------*/
+void Server::streamPackLoop()
+{
+	while (isStreaming)
+	{
+		//continuously loop through the map of songs
+		for (std::map<int, std::string>::iterator it = playlist.begin(); it != playlist.end(); ++it)
+		{
+			packer.makePacketsFromFile(it->second.c_str());
+			long ttl = packer.getTotalPackets();
+			for (long i = 0; i < ttl; ++i)
+			{
+				if (!isStreaming) break;
+				cbuff.push_back(packer.getNextPacket());
+			}
+		}
+	}
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: streamSendLoop
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS: 
+-- Version 1.0 - [EY] - 2016/APR/09 - Comment 
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE:  streamSendLoop ()
+--
+-- NOTES:
+-- This is the thread loop for the streaming.
+-- the loop will exit when the flag exits  
+-- the initial 21K of a song is sent every 2 milliseconds
+-- after that, the data slows down at sending rate that matches the speed
+-- of streaming 
+--------------------------------------------------------------------------*/
+void Server::streamSendLoop()
+{
+	sockaddr_in addr;
+	char * pstr;
+	int bsent;
+	const long long initialLoadInterval = -20000LL; // 2 MS
+	const long long initialLoadSize = 21;
+	const long long regularLoadInterval = -1000000LL; // 100 MS
+	
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	inet_pton(AF_INET, TEMP_IP/*MCAST_IP*/, &(addr.sin_addr.s_addr));
+	addr.sin_port = htons(PORTNO);
+	
+	while (isStreaming)
+	{
+		//get info of next song
+		long ttl = packer.getTotalPackets();
+		long lastpsz = packer.getLastPackSize();
+		timer.cancelTimer();
+		timer.setTimer(initialLoadInterval);
+		
+		//end the song
+		for (long i = 0; i < ttl; ++i)
+		{
+			if (!isStreaming) break;
+			// if it is no longer the intial part of the song
+			if(i == initialLoadSize)
+			{
+				// reset due time to regulkar mp3 rates
+				timer.cancelTimer();
+				timer.setTimer(regularLoadInterval);
+				
+			}
+
+			timer.resetTimer();
+			if ( waitForTimer() )
+			{
+				pstr = cbuff.pop(); // get next pack 
+				if (!pstr)
+					continue;
+				
+				bsent = sendto(sockUDP, pstr, BUFFSIZE, 0, (struct sockaddr *)&addr, sizeof(addr));
+				cout << "Bytes sent: " << bsent << "\n";
+			}
+		}
+		if (!isStreaming) break;
+		pstr = cbuff.pop(); //send last pack 
+		if (pstr)
+			bsent = sendto(sockUDP, pstr, lastpsz, 0, (struct sockaddr *)&addr, sizeof(addr));
+			cout << "Bytes sent: " << bsent << "\n";
+	}
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: runServer
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS: 
+-- Version 1.0 - [EY] - 2016/APR/09 - Add comments 
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE: int runServer (const char * ipaddr)
+-- const char * ipaddr 
 --
 -- RETURNS: 
 -- int representing state
 --
 -- NOTES:
--- this is currently procedural to be turned to object oriented 
+-- this is called right after the very initial constructor
+-- meant for the TCP thread to start 
+--
+-- THIS IS AWAITING THE ADDITIONS FROM TCP SIDE
 --------------------------------------------------------------------------*/
-int runServer(const char * ipaddr, int numPacks, int timeinterval)
+int Server::runServer(const char * ipaddr)
 {
-	const char * file = "FILE_IN_HERE";
-	//const char * file = "C:\\Users\\Eva\\Documents\\CST\\Semester4\\comp4985\\assignments\\a4\\a.txt";
-	
-	char buff[BUFFSIZE]{ 0 };
-	addrinfo * sendAddr;
-	int bSent;
-	SOCKET sock;
-	HANDLE hTimer = NULL; // windows timer
-	LARGE_INTEGER dueTime;
-	string str = "";
-	SoundFilePacketizer packer;
-	CBuff cbuff;
-	long numP;
-
-	packer.makePacketsFromFile(file);
-	numP = packer.getTotalPackets();
-	thread popthread(pushloop, std::ref(cbuff), std::ref(packer));
-
-	dueTime.QuadPart = -1200000LL; // 120 MS
-	if ( createWaitableTimer(hTimer) > 0)
-	{
-		exit(1);
-	}
-
-	initializeWSA();
-	sock = makeWSASocket(SOCK_DGRAM, 0);
-	if(!(sendAddr = getAddrInfo(ipaddr, PORT_STR, SOCK_DGRAM))) exit(1) ;
-
-	for (int i = 0; i < numP; i++)
-	{
-		setTimer(hTimer, dueTime);
-		if (WaitForSingleObject(hTimer, INFINITE) != WAIT_OBJECT_0)
-		{
-			printf("WaitForSingleObject failed (%d)\n", GetLastError());
-			break;
-		}
-		str = cbuff.pop();
-		memcpy(buff, str.c_str(), str.length());
-		bSent = sendto(sock, buff, BUFFSIZE, 0, sendAddr->ai_addr, sendAddr->ai_addrlen);
-		cout << "Bytes sent: " << bSent << "\n";
-	}
-
-	buff[0] = 0x04;
-	bSent = sendto(sock, buff, BUFFSIZE, 0, sendAddr->ai_addr, sendAddr->ai_addrlen);
-	freeaddrinfo(sendAddr);
-	closeWSA();
+	//tcp socket , make , bind, listen , accpet .. 
+	// send lib
+	// send client list 
+	// listen to commands
+	// if the client wants to stream a library, get index of lib  
+	int lib = 0;
+	// make a new thread to start stream
+	startStream();
 	return 0;
 }
 
 /*--------------------------------------------------------------------------
--- FUNCTION: CreateWaitableTimer
+-- FUNCTION: waitForTimer
 --
--- DATE: Apr. 4, 2017
+-- DATE: APR. 09, 2017
 --
 -- REVISIONS: 
--- Version 1.0 - [EY] - 2016/Apr/4 - Creted comment 
+-- Version 1.0 - [EY] - 2016/APR/09 - Comment  
 --
 -- DESIGNER: Eva Yu
 --
 -- PROGRAMMER: Eva Yu
 --
--- INTERFACE: intq CreateWaitableTimer (HANLDE &timer)
--- HANLDE &timer -- the handle to the windows timer object
+-- INTERFACE: inline bool waitForTimer ()
+--  desc
 --
 -- RETURNS: 
--- int representing state od create ( 0 for success )
+-- boolean -- whether the timer object tiggered the event 
 --
 -- NOTES:
--- This creares a windows timer object, unset and not running
+-- a wait for event function wrapper 
+-- that specifically waits for a timer object
 --------------------------------------------------------------------------*/
-int createWaitableTimer(HANDLE &timer)
+inline bool Server::waitForTimer()
 {
-	timer = CreateWaitableTimer(NULL, TRUE, NULL);
-	if (NULL == timer)
+	if (WaitForSingleObject(timer.getTimer(), INFINITE) != WAIT_OBJECT_0)
 	{
-		printf("CreateWaitableTimer failed (%d)\n", GetLastError());
-		return 1;
+		printf("WaitForSingleObject failed (%d)\n", GetLastError());
+		return false;
 	}
-	return 0;
-}
-
-/*--------------------------------------------------------------------------
--- FUNCTION: setTimer
---
--- DATE: Apr. 04, 2017
---
--- REVISIONS: 
--- Version 1.0 - [EY] - 2016/Apr/04 - Created Comment 
---
--- DESIGNER: Eva Yu
---
--- PROGRAMMER: Eva Yu
---
--- INTERFACE: int setTimer (HANDLE &timer, const LARGE_INTEGER &dueTime, const long reset)
--- HANDLE &timer -- handle to the timer to set
--- const LARGE_INTEGER &dueTime -- a long long int that represents the timer in (100th of a nanosecond)
--- const long reset -- ( default 500 ), actually... im not sure what this is for 
---
--- RETURNS: 
--- int representing state of setting ( 0 is success)
---
--- NOTES:
--- Timer must be reset with every use! 
---------------------------------------------------------------------------*/
-int setTimer(HANDLE &timer, const LARGE_INTEGER &dueTime, const long reset)
-{
-
-	if (!SetWaitableTimer(timer, &dueTime, reset, NULL, NULL, 0))
-	{
-		printf("SetWaitableTimer failed (%d)\n", GetLastError());
-		return 1;
-	}
-	return 0;
-}
-
-/*--------------------------------------------------------------------------
--- FUNCTION: pushloop
---
--- DATE: apr. 04, 2017
---
--- REVISIONS: 
--- Version 1.0 - [EY] - 2016/apr/04 - created Comment 
---
--- DESIGNER: Eva Yu
---
--- PROGRAMMER: Eva Yu
---
--- INTERFACE: void pushloop (CBuff &cbuff, SoundFilePacketizer &packer)
--- CBuff &cbuff, SoundFilePacketizer &packer the packetizer that will be read from 
---
--- NOTES:
--- This is a temp loop for the testing of CBuff's sempahores in a threaded 
-- -environment. This will be transferred in ot the server class
--- as apppropriate
---------------------------------------------------------------------------*/
-void pushloop(CBuff &cbuff, SoundFilePacketizer & packer)
-{
-	string str;
-	long ttl = packer.getTotalPackets();
-
-	do
-	{
-		str = packer.getNextPacket();
-		if (str.empty())
-			break;
-		cbuff.push_back(str);
-	} while (!str.empty());
-
-	return;
+	return true;
 }

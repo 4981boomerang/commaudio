@@ -8,7 +8,6 @@
 --    SOCKET makeWSAOverlapSocket(int type);
 --    int closeConnection(SOCKET s);
 --    boolean closeWSA(void);
-
 --    int getHostByName(char * res, int size);
 --    int getHostIP(char * dest);
 --    int listenSocket(SOCKET s);
@@ -18,13 +17,11 @@
 --    struct addrinfo * getAddrInfo(const char * ip, const char * port, int type = SOCK_STREAM);
 --    int connectSock(SOCKET sock, struct addrinfo * ai);
 --    void * globalAlloc(int size);
-
 --
 -- DATE: MM. DD, 2016
 --
 -- REVISIONS:
 -- Version 1.0 - [EY] - 2016/MM/DD - DESCRIPTION
-
 -- DESIGNER: Eva Yu
 --
 -- PROGRAMMER: Eva Yu
@@ -39,12 +36,13 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 
+
 #define BACKLOG 5
 #define PORT 13456
 #define PORT_STR  "13456"
 
 bool initializeWSA(void);
-boolean closeWSA(void);
+bool closeWSA(void);
 SOCKET makeWSASocket(int type, int flag = WSA_FLAG_OVERLAPPED); // type == SOCK_DGRAM | SOCK_STREAM
 int closeConnection(SOCKET s);
 int bindSocket(SOCKET s, int port = PORT);
@@ -94,10 +92,6 @@ inline int setSockOpt(int sock, int level, int cmd, void * req, const int reqlen
 
 inline int addToMcastGroup(int sock, ip_mreq & mreq)
 {
-	// make multicast group 
-	//ip_mreq mreq;
-	//mreq.imr_multiaddr.s_addr = inet_addr(MCAST_IP);
-	//mreq.imr_interface.s_addr = INADDR_ANY;
 	return setSockOpt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(ip_mreq));
 }
 

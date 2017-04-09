@@ -85,7 +85,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hprevInstance,
 	// Open up a Winsock v2.2 session
 	WORD wVersionRequested = MAKEWORD(2, 2);
 	WSADATA wsaData;
-	WSAStartup(wVersionRequested, &wsaData);
+	WSAStartup(wVersionRequested, &wsaData);	
 
 	//initialize LibZPlay library
 
@@ -128,21 +128,33 @@ LRESULT CALLBACK Idle(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 		switch (LOWORD(wParam))  //Parsing the menu selections
 		{
 		case IDM_CONNECT:
-			hThreadArray[0] = CreateThread(NULL, 0, connect, NULL, 0, &dwThreadIdArray[0]);
+			//TCP Connect/Commands Thread
+			hThreadArray[numberOfThreads] = CreateThread(NULL, 0, connect, NULL, 0, &dwThreadIdArray[numberOfThreads]);	
+			numberOfThreads++;
 			break;
 		case IDM_DOWNLOAD_FILE:
-			downloadFile();
+			//Download file Thread
+			hThreadArray[numberOfThreads] = CreateThread(NULL, 0, downloadFile, NULL, 0, &dwThreadIdArray[numberOfThreads]);	
+			numberOfThreads++;
 			break;
 		case IDM_UPLOAD_PACKET:
-			uploadFile();
+			//Upload file Thread
+			hThreadArray[numberOfThreads] = CreateThread(NULL, 0, uploadFile, NULL, 0, &dwThreadIdArray[numberOfThreads]);	
+			numberOfThreads++;
 			break;
 		case IDM_MUSIC:
-			//go to UDP listening
+			//UDP Connect/Music Thread
+			hThreadArray[numberOfThreads] = CreateThread(NULL, 0, music, NULL, 0, &dwThreadIdArray[numberOfThreads]);	
+			numberOfThreads++;
 			break;
 		case IDM_VOIP:
-			hThreadArray[2] = CreateThread(NULL, 0, microphoneStart, NULL, 0, &dwThreadIdArray[2]); //start microphone
+			//UDP VOIP Recv
+			hThreadArray[numberOfThreads] = CreateThread(NULL, 0, microphoneStart, NULL, 0, &dwThreadIdArray[numberOfThreads]); 
+			numberOfThreads++;
 
-			//go to UDP lisenting
+			//UDP VOIP Send
+			hThreadArray[numberOfThreads] = CreateThread(NULL, 0, microphoneStart, NULL, 0, &dwThreadIdArray[numberOfThreads]);
+			numberOfThreads++;
 			break;
 		}
 		break;
@@ -174,10 +186,9 @@ LRESULT CALLBACK Idle(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 --  DESIGNER:		Aing Ragunathan
 --
 --  INTERFACE:  
---					TCHAR[16] ip = ip address of server
---					int port = port number of server
+--					
 --
---  RETURNS:		void
+--  RETURNS:		
 --
 --  NOTES:
 --					Connects to the server for tcp commands only.
@@ -187,6 +198,8 @@ DWORD WINAPI connect(LPVOID lpParam){
 	struct hostent *host;
 	TCHAR ip[16] = DEFAULT_IP;
 	int port = DEFAULT_PORT;
+
+	//get IP and port from GUI
 
 	//Resolve IP address
 	if ((host = gethostbyname(ip)) == NULL)
@@ -226,131 +239,65 @@ DWORD WINAPI connect(LPVOID lpParam){
 		return false;
 	}
 
-	//update song list
-	if (!recvServerMessage()) {
-		perror("connect - song list update failed!");
-		return false;
-	}
-
-	//update client list
-	if (!recvServerMessage()) {
-		perror("connect - client list update failed!");
-		return false;
-	}
-
-	hThreadArray[1] = CreateThread(NULL, 0, recvCommand, NULL, 0, &dwThreadIdArray[1]);
+	//get commands from the server
+	hThreadArray[numberOfThreads] = CreateThread(NULL, 0, recvCommand, NULL, 0, &dwThreadIdArray[numberOfThreads]);
+	numberOfThreads++;
 
 	return true;
 }
 
+
 /*---------------------------------------------------------------------------------
---  FUNCTION:		command
+--  FUNCTION:		Music
 --
---  DATE:			Mar 29, 2017
+--  DATE:			Mar 20, 2017
 --
---  DESIGNER:		Aing Ragunathan
+--  DESIGNER:		Michael Goll
 --
 --  INTERFACE:
 --
---  RETURNS:
+--  RETURNS:		
 --
 --  NOTES:
---					Threaded function to receive messages from the server to update the
---					client and song list.	
---				
---					FYI might be replaced by idle
+--					Thread for playing music from the server.
+--					Music from the server arrives in the form of UDP packets.
+--					Packets are handled by the packetizer class.
+--					Music is played by the AudioPlayer class
 -----------------------------------------------------------------------------------*/
-DWORD WINAPI command(LPVOID lpParam){
-	//GUI COMMANDS GOES HERE
-		//request to play a song
-		//upload song to server
-		//download song from server
+DWORD WINAPI music(LPVOID lpParam) {
+	struct hostent *host;
+	TCHAR ip[16] = DEFAULT_IP;
+	int port = DEFAULT_PORT;
 
-	return 0;
-}
+	//get IP and port from GUI
 
-/*---------------------------------------------------------------------------------
---  FUNCTION:		uploadFile
---
---  DATE:			Mar 27, 2017
---
---  DESIGNER:		Aing Ragunathan
---
---  INTERFACE:		none
---
---  RETURNS:		void
---
---  NOTES:
---					Sends a contol message to the server before sending a file.
------------------------------------------------------------------------------------*/
-bool uploadFile() {
-	HANDLE fileOutputHandle;	//Handle to the requested file to send
-	TCHAR fileBuffer[PACKET_SIZE] = { 0 };	//buffer for file
-	//TCHAR filename[MAX_PATH] = "McLaren.txt";
-	TCHAR filename[MAX_PATH] = TEST_FILE;
-	OVERLAPPED ol = { 0 };
-	DWORD bytesRead;
-	string temp;
-
-
-	fileOutputHandle = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-	//validate file exists and send
-	if (fileOutputHandle == INVALID_HANDLE_VALUE) {
+	//Resolve IP address
+	if ((host = gethostbyname(ip)) == NULL)
+	{
 		MessageBox(hwnd,
-			"Can not open file",
-			"ReadFile: Failed!",
+			"Unable to resolve host name",
+			"Error: GetHostByName",
 			MB_ICONERROR);
+		SendMessage(hwnd, WM_DESTROY, NULL, NULL);
 		return false;
 	}
-	else {
-		do {
-			if (!ReadFile(fileOutputHandle, fileBuffer, PACKET_SIZE - 1, &bytesRead, &ol)) {
-				printf("Terminal failure: Unable to read from file.\n GetLastError=%08x\n", GetLastError());
-				MessageBox(hwnd,
-					"Can not read from file",
-					"ReadFile: Failed!",
-					MB_ICONERROR);
-				CloseHandle(fileOutputHandle);
-				return false;
-			}
 
-			//append a null character to cut off the string if the entire buffer isn't used
-			if (strlen(fileBuffer) < 1023) {
-				fileBuffer[bytesRead] = '\0';
-			}
+	//Create UDP socket with completion routine
+	
+	//Set up socket address structure
+	
+	//create audio player
 
-			//send(Socket, fileBuffer, strlen(fileBuffer), 0); //send the buffer to the server		
-			send(Socket, fileBuffer, bytesRead, 0); //send the buffer to the server		
-			ol.Offset += bytesRead;	//move the reading window 
-			temp = fileBuffer;	//reset the buffer
-			temp.resize(PACKET_SIZE);
-		} while (strlen(fileBuffer) >= PACKET_SIZE-1);
-	}
+	//while(user doesn't stall){
+		//recv packet
 
+		//play packet's contents
+	//}
 
 	return true;
 }
 
-/*---------------------------------------------------------------------------------
---  FUNCTION:		downloadFile
---
---  DATE:			Mar 27, 2017
---
---  DESIGNER:		Aing Ragunathan
---
---  INTERFACE:	
---
---  RETURNS:
---
---  NOTES:
---					Receives a file from the server. Number of packets must be specified.
------------------------------------------------------------------------------------*/
-bool downloadFile() {
 
-	//differentiate file packet from command
-	return true;
-}
 
 /*---------------------------------------------------------------------------------
 --  FUNCTION:		recvCommand
@@ -369,15 +316,129 @@ bool downloadFile() {
 --					Command messages can update the client or songs list.
 -----------------------------------------------------------------------------------*/
 DWORD WINAPI recvCommand(LPVOID lpParam) {
-	while (true) {
-		recvServerMessage();	//update song and client lists
+	char messageBuffer[PACKET_SIZE];
+	ClientData *clientData;
+	SongData *songData;
+		
+	while (1) {
+		//Get header from server
+		if (recv(Socket, messageBuffer, sizeof(int), 0) == -1) {
+			perror("recvServerMessage - Recv control message failed!");
+			return false;
+		}
+		//manage server command
+		int* header = reinterpret_cast<int*>(messageBuffer);
+
+		switch (*header)
+		{
+		case SONG_UPDATE:
+			if (recv(Socket, messageBuffer + sizeof(int), sizeof(SongData) - sizeof(int), 0) == -1) {
+				perror("recvServerMessage - Recv control message failed!");
+				//update GUI
+				return false;
+			}
+			songData = (SongData *)messageBuffer;	//extract song from buffer
+			SongData recvSongData;
+			recvSongData.SID = songData->SID;	//copy song id over
+			sprintf_s(recvSongData.artist, STR_MAX_SIZE, "%s", songData->artist);
+			sprintf_s(recvSongData.title, STR_MAX_SIZE, "%s", songData->title);
+			songs.push_back(recvSongData); //add to the list of clients
+			break;
+		case CLIENT_UPDATE:
+			if (recv(Socket, messageBuffer + sizeof(int), sizeof(ClientData) - sizeof(int), 0) == -1) {
+				perror("recvServerMessage - Recv control message failed!");
+				//update GUI
+				return false;
+			}
+			clientData = (ClientData *)messageBuffer;	//extract client from buffer
+			ClientData recvClientData;
+			sprintf_s(recvClientData.username, STR_MAX_SIZE, "%s", clientData->username);
+			sprintf_s(recvClientData.ip, STR_MAX_SIZE, "%s", clientData->ip);
+			clients.push_back(recvClientData);	//add to the list of clients
+			break;
+		case SONG_DOWNLOAD:
+			while (sizeof(messageBuffer) == PACKET_SIZE) {
+				if (recv(Socket, messageBuffer, sizeof(int), 0) == -1) {
+					perror("recvServerMessage - Recv control message failed!");
+					return false;
+				}
+			}
+			break;
+		}		
 	}
+
+	return true;
 }
 
 /*---------------------------------------------------------------------------------
---  FUNCTION:		Connect
+--  FUNCTION:		uploadFile
 --
 --  DATE:			Mar 27, 2017
+--
+--	REVISIONS:
+--					April 8, 2017 - Using packetizer functions
+--
+--  DESIGNER:		Aing Ragunathan
+--
+--  INTERFACE:		none
+--
+--  RETURNS:		void
+--
+--  NOTES:
+--					Sends a contol message to the server before sending an entire song 
+--					file using the Packetizer functions.
+-----------------------------------------------------------------------------------*/
+DWORD WINAPI uploadFile(LPVOID lpParam) {
+	TCHAR fileBuffer[PACKET_SIZE] = { 0 };	//buffer for file
+											//TCHAR filename[MAX_PATH] = "McLaren.txt";
+	//TCHAR filename[MAX_PATH] = TEST_FILE;
+	char filename[MAX_PATH] = TEST_FILE;
+	long totalNumberOfPackets;	
+	long lastPacketSize;	
+
+	/*	GUI	*/
+	//get filename from GUI	-> char * filename
+	//get artist
+	//get title
+	
+	SongData uploadRequest;
+	char * messageBuffer;
+
+	//prepare song request packet, NO SID
+	sprintf_s(uploadRequest.artist, STR_MAX_SIZE, "%s", TEST_ARTIST);
+	sprintf_s(uploadRequest.title, STR_MAX_SIZE, "%s", TEST_TITLE);
+
+	messageBuffer = (char *) &uploadRequest;	//make struct sendable 
+	send(Socket, messageBuffer, strlen(messageBuffer), 0);
+
+
+	//How would I preform validation for opening file?
+		//file does not exists
+		//file failed to open
+		//can we make SoundFilePacketizer::makePacketsFromFile return bool?
+	packer.makePacketsFromFile(filename);
+	totalNumberOfPackets = packer.getTotalPackets();
+	lastPacketSize = packer.getLastPackSize();
+
+	//send all packets except for last one
+	for (int i = 0; i < totalNumberOfPackets; i++) {
+		send(Socket, packer.getNextPacket(), PACKET_SIZE, 0);
+	}
+		
+	//send last packet
+	send(Socket, packer.getNextPacket(), lastPacketSize, 0); 	
+
+
+	//update GUI	- make function 
+
+
+	return true;
+}
+
+/*---------------------------------------------------------------------------------
+--  FUNCTION:		downloadFile
+--
+--  DATE:			April 7, 2017
 --
 --  DESIGNER:		Aing Ragunathan
 --
@@ -386,88 +447,31 @@ DWORD WINAPI recvCommand(LPVOID lpParam) {
 --  RETURNS:
 --
 --  NOTES:
---					Receives control messages from the server and updates lists accordingly
---					or initiates downloading a file from the server.
+--					Receives a file from the server. Number of packets must be specified.
 -----------------------------------------------------------------------------------*/
-bool recvServerMessage() {
-	char messageBuffer[PACKET_SIZE];
-	ControlMessage *controlMessage;
-	ClientData *clientData;
-	SongData *songData;
-		
-	//Get header from server
-	if (recv(Socket, messageBuffer, sizeof(int), 0) == -1) {
-		perror("recvServerMessage - Recv control message failed!");
-		return false;
-	}
-	//manage server update or download response
-	int* header = reinterpret_cast<int*>(messageBuffer);
-	//memcpy(&header, messageBuffer, sizeof(int));
-	switch (*header)
-	{
-	case SONG_UPDATE:
-		if (recv(Socket, messageBuffer + sizeof(int), sizeof(SongData) - sizeof(int), 0) == -1) {
-			perror("recvServerMessage - Recv control message failed!");
-			return false;
-		}
-		songData = (SongData *)messageBuffer;	//extract song from buffer
-		//songs.push_back(SongData());	//create a new song object in the vector
-		SongData recvSongData;
-		recvSongData.SID = songData->SID;	//copy song id over
-		sprintf_s(recvSongData.artist, STR_MAX_SIZE, "%s", songData->artist);
-		sprintf_s(recvSongData.title, STR_MAX_SIZE, "%s", songData->title);
-		songs.push_back(recvSongData);
-		break;
-	case CLIENT_UPDATE:
-		if (recv(Socket, messageBuffer + sizeof(int), sizeof(ClientData) - sizeof(int), 0) == -1) {
-			perror("recvServerMessage - Recv control message failed!");
-			return false;
-		}
-		clientData = (ClientData *)messageBuffer;	//extract client from buffer
-		//clients.push_back(ClientData());	//create a new client object in the vector
-		ClientData recvClientData;
-		sprintf_s(recvClientData.username, STR_MAX_SIZE, "%s", clientData->username);
-		sprintf_s(recvClientData.ip, STR_MAX_SIZE, "%s", clientData->ip);
-		break;
-	case SONG_REQUEST:
-		//get file from server and save to disk
-		if (!downloadFile()) {
-			return false;
-		}
-		break;
-	}
+//WIP
+DWORD WINAPI downloadFile(LPVOID lpParam) {
+	char* sid = "1";
+	char filename[MAX_PATH] = TEST_FILE;
 
-	return true;
-}
+	/*	GUI	*/
+	//get filename from GUI	-> char * filename
+	//get corresponding SID of filename
 
-/*---------------------------------------------------------------------------------
---  FUNCTION:		requestSong
---
---  DATE:			April 3, 2017
---	
---  DESIGNER:		Aing Ragunathan
---
---  INTERFACE:	 
-					int song - SID of the song requested
---
---  RETURNS:		none
---
---  NOTES:
---					Sends a song request to the server.
------------------------------------------------------------------------------------*/
-bool requestSong(int song) {
-	ControlMessage *controlMessage;
-	char *messageBuffer;
+	fileInputHandle = CreateFile(filename, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+
+	//send request song packet (SID)
+	SongData downloadRequest;
+	char * messageBuffer;
+
+	//prepare song request packet, NO SID
+	downloadRequest.SID = atoi(sid);
+	messageBuffer = (char *)&downloadRequest;	//make struct sendable 
+	send(Socket, messageBuffer, strlen(messageBuffer), 0);
 	
-	//setup control message
-	controlMessage = new ControlMessage();
-	controlMessage->header = SONG_REQUEST;
-	controlMessage->SID = song;
-	messageBuffer = (char *)controlMessage;
-
-	//send message to server
-	if (send(Socket, messageBuffer, strlen(messageBuffer), 0) == -1)
-		return false;
-
+	//update GUI	- make function 
 	return true;
 }
+
+

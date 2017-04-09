@@ -22,7 +22,7 @@
     <ProjectGuid>{F6AF1B10-1D00-453D-A1C7-EF0A3DABA676}</ProjectGuid>
     <RootNamespace>Packetizer</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
-    <ProjectName>CommAudio</ProjectName>
+    <ProjectName>CommAudioServer</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -119,19 +119,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CBuff.cpp" />
-    <ClCompile Include="Client.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Packetizer.cpp" />
     <ClCompile Include="Server.cpp" />
     <ClCompile Include="SocketWrappers.cpp" />
+    <ClCompile Include="WinTimer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CBuff.h" />
-    <ClInclude Include="Client.h" />
     <ClInclude Include="Packetizer.h" />
     <ClInclude Include="Semaphore.h" />
     <ClInclude Include="Server.h" />
     <ClInclude Include="SocketWrappers.h" />
+    <ClInclude Include="WinTimer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
