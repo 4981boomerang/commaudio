@@ -106,20 +106,12 @@ void RunServer(SOCKET& serverSock)
 
 	
 	if (!initializeWSA())
-	{
-		wsprintf(temp, L"WSAStartup failed with error");
-		Display(temp);
 		return;
-	}
 
 	// create a socket.
 	//if ((tcp_listen = makeWSASocket(SOCK_STREAM, 0)) == INVALID_SOCKET)
 	if ((tcp_listen = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
-	{
-		wsprintf(temp, L"socket() failed with error %d", WSAGetLastError());
-		Display(temp);
 		return;
-	}
 
 	struct sockaddr_in server;
 	memset((char *)&server, 0, sizeof(struct sockaddr_in));
@@ -130,13 +122,9 @@ void RunServer(SOCKET& serverSock)
 	// Bind an address to the socket
 	//bindSocket(tcp_listen, htons(g_port));
 	if (bind(tcp_listen, (struct sockaddr *)&server, sizeof(server)) == -1)
-	{
-		wsprintf(temp, L"Can't bind name to socket", WSAGetLastError());
-		Display(temp);
 		return;
-	}
 
-	if (listen(tcp_listen, 5) == SOCKET_ERROR)
+	if (listen(tcp_listen, MAX_NUM_CLIENT) == SOCKET_ERROR)
 	{
 		wsprintf(temp, L"listen() failed with error %d", WSAGetLastError());
 		Display(temp);
