@@ -13,6 +13,9 @@
 #include <strsafe.h>
 #include <vector>
 #include "Microphone.h"
+#include "../../Packetizer/Packetizer/Packetizer.h"
+//#include "../../Packetizer/Packetizer/CBuff.h"
+
 
 #define DEFAULT_PORT	5000	
 #define WM_SOCKET		104
@@ -21,25 +24,17 @@
 #define STR_MAX_SIZE	128
 #define STR_NAME		128
 
-#define DEFAULT_IP		"192.168.0.22"
+//#define DEFAULT_IP		"192.168.0.22"
+#define DEFAULT_IP		"localhost"
 #define TEST_FILE		"06 - Little Wing.flac"
+#define TEST_ARTIST		"Jimi Hendrix"
+#define TEST_TITLE		"Little Wing"
 
 
 #define SONG_UPDATE				1
 #define CLIENT_UPDATE			2
-#define SONG_REQUEST			3
+#define SONG_DOWNLOAD			3
 #define CLIENT_MIC_CONNECTION	4
-
-
-//deprecated
-typedef struct {
-	int header;
-	union {
-		int numOfSongs;
-		int numOfClients;
-		int SID;		
-	};
-} ControlMessage;
 
 typedef struct {
 	int header;
@@ -58,6 +53,7 @@ typedef struct {
 LRESULT CALLBACK Idle(HWND, UINT, WPARAM, LPARAM);
 DWORD WINAPI recvCommand(LPVOID lpParam);
 DWORD WINAPI connect(LPVOID lpParam);
+DWORD WINAPI music(LPVOID lpParam);
 DWORD WINAPI uploadFile(LPVOID lpParam);
 DWORD WINAPI downloadFile(LPVOID lpParam);
 
@@ -70,7 +66,5 @@ DWORD dwThreadIdArray[MAX_THREADS];
 std::vector<SongData> songs;
 std::vector<ClientData> clients;
 int numberOfThreads;
-
-
-
+SoundFilePacketizer packer;
 

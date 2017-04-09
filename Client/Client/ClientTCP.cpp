@@ -85,7 +85,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hprevInstance,
 	// Open up a Winsock v2.2 session
 	WORD wVersionRequested = MAKEWORD(2, 2);
 	WSADATA wsaData;
-	WSAStartup(wVersionRequested, &wsaData);
+	WSAStartup(wVersionRequested, &wsaData);	
 
 	//initialize LibZPlay library
 
@@ -317,7 +317,6 @@ DWORD WINAPI music(LPVOID lpParam) {
 -----------------------------------------------------------------------------------*/
 DWORD WINAPI recvCommand(LPVOID lpParam) {
 	char messageBuffer[PACKET_SIZE];
-	ControlMessage *controlMessage;
 	ClientData *clientData;
 	SongData *songData;
 		
@@ -357,10 +356,8 @@ DWORD WINAPI recvCommand(LPVOID lpParam) {
 			sprintf_s(recvClientData.ip, STR_MAX_SIZE, "%s", clientData->ip);
 			clients.push_back(recvClientData);	//add to the list of clients
 			break;
-		case SONG_REQUEST:
-			//get file from server and save to disk
-
-			break;
+		case SONG_DOWNLOAD:
+			
 		default:
 			//packetize download
 			break;
@@ -375,6 +372,9 @@ DWORD WINAPI recvCommand(LPVOID lpParam) {
 --
 --  DATE:			Mar 27, 2017
 --
+--	REVISIONS:
+--					April 8, 2017 - Using packetizer functions
+--
 --  DESIGNER:		Aing Ragunathan
 --
 --  INTERFACE:		none
@@ -382,72 +382,51 @@ DWORD WINAPI recvCommand(LPVOID lpParam) {
 --  RETURNS:		void
 --
 --  NOTES:
---					Sends a contol message to the server before sending a file.
+--					Sends a contol message to the server before sending an entire song 
+--					file using the Packetizer functions.
 -----------------------------------------------------------------------------------*/
 DWORD WINAPI uploadFile(LPVOID lpParam) {
-	HANDLE fileOutputHandle;	//Handle to the requested file to send
 	TCHAR fileBuffer[PACKET_SIZE] = { 0 };	//buffer for file
 											//TCHAR filename[MAX_PATH] = "McLaren.txt";
-	TCHAR filename[MAX_PATH] = TEST_FILE;
-	OVERLAPPED ol = { 0 };
-	DWORD bytesRead;
-	string temp;
+	//TCHAR filename[MAX_PATH] = TEST_FILE;
+	char filename[MAX_PATH] = TEST_FILE;
+	long totalNumberOfPackets;	
+	long lastPacketSize;	
 
-	//get filename from GUI
+	/*	GUI	*/
+	//get filename from GUI	-> char * filename
 	//get artist
 	//get title
 	
-	//send SongData(artist, title) packet to server
+	SongData uploadRequest;
+	char * messageBuffer;
 
-	fileOutputHandle = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	//prepare song request packet, NO SID
+	sprintf_s(uploadRequest.artist, STR_MAX_SIZE, "%s", TEST_ARTIST);
+	sprintf_s(uploadRequest.title, STR_MAX_SIZE, "%s", TEST_TITLE);
 
-	//validate file exists and send
-	if (fileOutputHandle == INVALID_HANDLE_VALUE) {
-		MessageBox(hwnd,
-			"Can not open file",
-			"ReadFile: Failed!",
-			MB_ICONERROR);
-		return false;
+	messageBuffer = (char *) &uploadRequest;	//make struct sendable 
+	send(Socket, messageBuffer, strlen(messageBuffer), 0);
+
+
+	//How would I preform validation for opening file?
+		//file does not exists
+		//file failed to open
+		//can we make SoundFilePacketizer::makePacketsFromFile return bool?
+	packer.makePacketsFromFile(filename);
+	totalNumberOfPackets = packer.getTotalPackets();
+	lastPacketSize = packer.getLastPackSize();
+
+	//send all packets except for last one
+	for (int i = 0; i < totalNumberOfPackets; i++) {
+		send(Socket, packer.getNextPacket(), PACKET_SIZE, 0);
 	}
-	else {
-
 		
-
-		//NOTE: use packetizer instead	
-
-		//create packetizer
-
-		//while packetizer->size > 0	- make function 
-		//send packet
-
-		//update GUI	- make function 
+	//send last packet
+	send(Socket, packer.getNextPacket(), lastPacketSize, 0); 	
 
 
-
-
-		do {
-			if (!ReadFile(fileOutputHandle, fileBuffer, PACKET_SIZE - 1, &bytesRead, &ol)) {
-				printf("Terminal failure: Unable to read from file.\n GetLastError=%08x\n", GetLastError());
-				MessageBox(hwnd,
-					"Can not read from file",
-					"ReadFile: Failed!",
-					MB_ICONERROR);
-				CloseHandle(fileOutputHandle);
-				return false;
-			}
-
-			//append a null character to cut off the string if the entire buffer isn't used
-			if (strlen(fileBuffer) < 1023) {
-				fileBuffer[bytesRead] = '\0';
-			}
-
-			//send(Socket, fileBuffer, strlen(fileBuffer), 0); //send the buffer to the server		
-			send(Socket, fileBuffer, bytesRead, 0); //send the buffer to the server		
-			ol.Offset += bytesRead;	//move the reading window 
-			temp = fileBuffer;	//reset the buffer
-			temp.resize(PACKET_SIZE);
-		} while (strlen(fileBuffer) >= PACKET_SIZE - 1);
-	}
+	//update GUI	- make function 
 
 
 	return true;
@@ -467,57 +446,24 @@ DWORD WINAPI uploadFile(LPVOID lpParam) {
 --  NOTES:
 --					Receives a file from the server. Number of packets must be specified.
 -----------------------------------------------------------------------------------*/
+//WIP
 DWORD WINAPI downloadFile(LPVOID lpParam) {
-	//create packetizer
-	//create file handle
-	
-	//ui->get song name()	- make function (reuse for request)
+	char* sid = "1";
 
-	//match name to SID()	- make function (reuse for request)
+	/*	GUI	*/
+	//get filename from GUI	-> char * filename
+	//get corresponding SID of filename
 
-	//send request song packet (SID)	- make function (reuse for request)
 
-	//while(packetizer->size > 0){		- make function 
-		//recv packet
-		//append to packetizer?
-	//}
+	//send request song packet (SID)
+	SongData downloadRequest;
+	char * messageBuffer;
 
-	//save file in songs directory		- make function 
-		//OR save file to filename from GUI
+	//prepare song request packet, NO SID
+	downloadRequest.SID = atoi(sid);
+	messageBuffer = (char *)&downloadRequest;	//make struct sendable 
+	send(Socket, messageBuffer, strlen(messageBuffer), 0);
 	
 	//update GUI	- make function 
-	return true;
-}
-
-
-/*---------------------------------------------------------------------------------
---  FUNCTION:		requestSong
---
---  DATE:			April 3, 2017
---	
---  DESIGNER:		Aing Ragunathan
---
---  INTERFACE:	 
-					int song - SID of the song requested
---
---  RETURNS:		none
---
---  NOTES:
---					Sends a song request to the server.
------------------------------------------------------------------------------------*/
-bool requestSong(int song) {
-	ControlMessage *controlMessage;
-	char *messageBuffer;
-	
-	//setup control message
-	controlMessage = new ControlMessage();
-	controlMessage->header = SONG_REQUEST;
-	controlMessage->SID = song;
-	messageBuffer = (char *)controlMessage;
-
-	//send message to server
-	if (send(Socket, messageBuffer, strlen(messageBuffer), 0) == -1)
-		return false;
-
 	return true;
 }

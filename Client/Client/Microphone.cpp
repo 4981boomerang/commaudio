@@ -39,7 +39,7 @@ DWORD WINAPI microphoneStart(LPVOID lpParam) {
 
 
 	//set callback to intercept message (MsgStreamNeedMoreData)
-	player->SetCallbackFunc(myCallbackFunc, (TCallbackMessage)MsgStreamNeedMoreData, player->Play);
+	//player->SetCallbackFunc(myCallbackFunc, (TCallbackMessage)MsgStreamNeedMoreData, player->Play);
 
 
 	// start playing from line-in
