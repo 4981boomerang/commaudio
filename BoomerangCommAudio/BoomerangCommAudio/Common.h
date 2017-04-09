@@ -22,8 +22,11 @@
 #define PACKET_STR_MAX 128
 #define IP_LENGTH 64
 
+#define DATA_BUFSIZE 8192
+
 typedef struct _SOCKET_INFORMATION {
-	//OVERLAPPED Overlapped;
+	OVERLAPPED Overlapped;
+	CHAR Buffer[DATA_BUFSIZE];
 	WSABUF DataBuf;
 	SOCKET Socket;
 	DWORD BytesSEND;
@@ -94,4 +97,14 @@ inline void Display(const wchar_t* str)
 	SetFocus(g_hResult);
 	//SendMessage(g_hResult, LB_GETCURSEL, 0, 0);
 	//SendMessage(g_hResult, LB_ADDSTRING, 0, (LPARAM)str);
+}
+
+inline const std::wstring GetWC(const char *c)
+{
+	const size_t cSize = strlen(c) + 1;
+	std::wstring wc(cSize, L'#');
+	size_t outSize;
+	mbstowcs_s(&outSize, &wc[0], cSize, c, cSize - 1);
+
+	return wc;
 }
