@@ -2,8 +2,23 @@
 
 using namespace libZPlay;
 
+/*---------------------------------------------------------------------------------
+--  FUNCTION:		microphoneStart
+--
+--  DATE:			Mar 27, 2017
+--
+--  DESIGNER:		Aing Ragunathan
+--
+--  INTERFACE:
+--
+--  RETURNS:
+--
+--  NOTES:
+--					Threaded function used to setup VOIP between clients. 
+-----------------------------------------------------------------------------------*/
 DWORD WINAPI microphoneStart(LPVOID lpParam) {
 	ZPlay* player;
+	
 
 	player = CreateZPlay();
 
@@ -37,9 +52,8 @@ DWORD WINAPI microphoneStart(LPVOID lpParam) {
 		return 0;
 	}
 
-
 	//set callback to intercept message (MsgStreamNeedMoreData)
-	//player->SetCallbackFunc(myCallbackFunc, (TCallbackMessage)MsgStreamNeedMoreData, );
+	player->SetCallbackFunc(myCallbackFunc, (TCallbackMessage)MsgStreamNeedMoreData, NULL);
 
 
 	// start playing from line-in
@@ -51,3 +65,32 @@ DWORD WINAPI microphoneStart(LPVOID lpParam) {
 
 	return 0;
 }
+
+/*---------------------------------------------------------------------------------
+--  FUNCTION:		myCallbackFunc
+--
+--  DATE:			Mar 27, 2017
+--
+--  DESIGNER:		Mike Goll
+--
+--  INTERFACE:
+--
+--  RETURNS:
+--
+--  NOTES:
+--					Threaded function used to send VOIP packets to another client. 
+-----------------------------------------------------------------------------------*/
+int  __stdcall  myCallbackFunc(void* instance, void *user_data, TCallbackMessage message, unsigned int param1, unsigned int param2)
+{
+	/* 
+		Requires a UDP socket
+
+	if (send(udpSocket, (const char*) param1, param2, 0) == -1) {
+		return 2;
+	}
+
+	*/
+	return 1;
+}
+
+
