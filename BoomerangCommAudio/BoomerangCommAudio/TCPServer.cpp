@@ -75,6 +75,7 @@ void TCPServer::AcceptFunc()
 	struct	sockaddr_in client;
 	wchar_t temp[STR_SIZE];
 
+	EventTotal = 1;
 	while (true)
 	{
 		client_len = sizeof(client);
@@ -97,10 +98,10 @@ void TCPServer::AcceptFunc()
 		// Mapping the accepted client.
 		ClientInformation clientInformation;
 		sprintf(clientInformation.ip, "%s", acceptedClientIp);
+		sprintf(clientInformation.username, "%s", "Unknown");
 		mapClient[acceptedSocket] = clientInformation;
 
 		// completion routines
-		EventTotal = 1;
 		EnterCriticalSection(&CriticalSection);
 
 		// Create a socket information structure to associate with the accepted socket.
@@ -118,7 +119,7 @@ void TCPServer::AcceptFunc()
 		SocketArray[EventTotal]->BytesSEND = 0;
 		SocketArray[EventTotal]->BytesRECV = 0;
 		SocketArray[EventTotal]->DataBuf.len = BUF_SIZE;
-		//SocketArray[EventTotal]->DataBuf.buf = SocketArray[EventTotal]->Buffer;
+		SocketArray[EventTotal]->DataBuf.buf = SocketArray[EventTotal]->Buffer;
 
 		if ((SocketArray[EventTotal]->Overlapped.hEvent = EventArray[EventTotal] =
 			WSACreateEvent()) == WSA_INVALID_EVENT)
@@ -126,6 +127,20 @@ void TCPServer::AcceptFunc()
 			wsprintf(temp, L"WSACreateEvent() failed with error %d", WSAGetLastError());
 			Display(temp);
 			return;
+		}
+
+		DWORD Flags = 0;
+		DWORD RecvBytes;
+		if (WSARecv(SocketArray[EventTotal]->Socket,
+			&(SocketArray[EventTotal]->DataBuf), 1, &RecvBytes, &Flags,
+			&(SocketArray[EventTotal]->Overlapped), NULL) == SOCKET_ERROR)
+		{
+			if (WSAGetLastError() != ERROR_IO_PENDING)
+			{
+				wsprintf(temp, L"WSARecv() failed with error %d", WSAGetLastError());
+				Display(temp);
+				return;
+			}
 		}
 
 		EventTotal++;
@@ -136,7 +151,7 @@ void TCPServer::AcceptFunc()
 		// Signal the first event in the event array to tell the worker thread to
 		// service an additional event in the event array
 		//
-		if (WSASetEvent(EventArray[0]) == FALSE)
+		if (WSASetEvent(AcceptEvent) == FALSE)
 		{
 			wsprintf(temp, L"WSASetEvent failed with error %d", WSAGetLastError());
 			Display(temp);
@@ -185,22 +200,22 @@ void TCPServer::WorkThread()
 
 	while (TRUE)
 	{
-		while (TRUE)
-		{
-			Index = WSAWaitForMultipleEvents(1, &AcceptEvent, FALSE, WSA_INFINITE, TRUE);
+		//while (TRUE)
+		//{
+		//	Index = WSAWaitForMultipleEvents(1, &AcceptEvent, FALSE, WSA_INFINITE, TRUE);
 
-			if (Index == WSA_WAIT_FAILED)
-			{
-				wsprintf(temp, L"WSAWaitForMultipleEvents failed with error %d", WSAGetLastError());
-				return;
-			}
+		//	if (Index == WSA_WAIT_FAILED)
+		//	{
+		//		wsprintf(temp, L"WSAWaitForMultipleEvents failed with error %d", WSAGetLastError());
+		//		return;
+		//	}
 
-			if (Index != WAIT_IO_COMPLETION)
-			{
-				// An accept() call event is ready - break the wait loop
-				break;
-			}
-		}
+		//	if (Index != WAIT_IO_COMPLETION)
+		//	{
+		//		// An accept() call event is ready - break the wait loop
+		//		break;
+		//	}
+		//}
 
 		if ((Index = WSAWaitForMultipleEvents(EventTotal, EventArray, FALSE,
 			WSA_INFINITE, FALSE)) == WSA_WAIT_FAILED)
@@ -243,7 +258,7 @@ void TCPServer::WorkThread()
 			}
 		}
 
-		wsprintf(temp, L"Socket %d connected\n", SI->Socket);
+		wsprintf(temp, L"Recv from %d\n", SI->Socket);
 		Display(temp);
 	}
 

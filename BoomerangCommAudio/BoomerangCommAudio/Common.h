@@ -26,7 +26,7 @@
 
 typedef struct _SOCKET_INFORMATION {
 	OVERLAPPED Overlapped;
-	CHAR Buffer[DATA_BUFSIZE];
+	CHAR Buffer[BUF_SIZE];
 	WSABUF DataBuf;
 	SOCKET Socket;
 	DWORD BytesSEND;
