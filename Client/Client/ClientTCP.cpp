@@ -357,9 +357,12 @@ DWORD WINAPI recvCommand(LPVOID lpParam) {
 			clients.push_back(recvClientData);	//add to the list of clients
 			break;
 		case SONG_DOWNLOAD:
-			
-		default:
-			//packetize download
+			while (sizeof(messageBuffer) == PACKET_SIZE) {
+				if (recv(Socket, messageBuffer, sizeof(int), 0) == -1) {
+					perror("recvServerMessage - Recv control message failed!");
+					return false;
+				}
+			}
 			break;
 		}		
 	}
@@ -449,10 +452,13 @@ DWORD WINAPI uploadFile(LPVOID lpParam) {
 //WIP
 DWORD WINAPI downloadFile(LPVOID lpParam) {
 	char* sid = "1";
+	char filename[MAX_PATH] = TEST_FILE;
 
 	/*	GUI	*/
 	//get filename from GUI	-> char * filename
 	//get corresponding SID of filename
+
+	fileInputHandle = CreateFile(filename, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
 
 	//send request song packet (SID)
@@ -467,3 +473,5 @@ DWORD WINAPI downloadFile(LPVOID lpParam) {
 	//update GUI	- make function 
 	return true;
 }
+
+

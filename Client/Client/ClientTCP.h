@@ -1,3 +1,6 @@
+#ifndef CLIENTTCP_H
+#define CLIENTTCP_H
+
 #define STRICT
 #define _CRT_SECURE_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -12,6 +15,7 @@
 #include <tchar.h>
 #include <strsafe.h>
 #include <vector>
+#include <ws2tcpip.h>
 #include "Microphone.h"
 #include "../../Packetizer/Packetizer/Packetizer.h"
 //#include "../../Packetizer/Packetizer/CBuff.h"
@@ -67,4 +71,6 @@ std::vector<SongData> songs;
 std::vector<ClientData> clients;
 int numberOfThreads;
 SoundFilePacketizer packer;
+HANDLE fileInputHandle;
 
+#endif
