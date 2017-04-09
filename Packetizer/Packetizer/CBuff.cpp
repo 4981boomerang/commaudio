@@ -149,31 +149,6 @@ char * CBuff::pop()
 }
 
 /*--------------------------------------------------------------------------
--- FUNCTION: getCapacity
---
--- DATE: MM. DD, 2017
---
--- REVISIONS: 
--- Version 1.0 - [EY] - 2016/MM/DD - DESCRIPTION 
---
--- DESIGNER: Eva Yu
---
--- PROGRAMMER: Eva Yu
---
--- INTERFACE: unsigned int getCapacity ()
---
--- RETURNS: 
--- unsigned int -- the space left in the buffer
---
--- NOTES:
--- returns the space left in the buffer
---------------------------------------------------------------------------*/
-//unsigned int CBuff::getCapacity() const
-//{
-//	return _capacity;
-//}
-
-/*--------------------------------------------------------------------------
 -- FUNCTION: isReadyForRead
 --
 -- DATE: MM. DD, 2017
@@ -218,7 +193,7 @@ bool CBuff::isReadyForRead(double percentage) const
 -- bool - true is full
 --
 -- NOTES:
--- checks if teh buffer is full 
+-- checks if the buffer is full 
 --------------------------------------------------------------------------*/
 unsigned int CBuff::checkFull() const
 {

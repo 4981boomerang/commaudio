@@ -141,7 +141,7 @@ int WinTimer::resetTimer()
 {
 	if (!SetWaitableTimer(timer, &dueTime, reset, NULL, NULL, 0))
 	{
-		std::cout << "SetWaitableTimer failed: " 
+		cerr << "SetWaitableTimer failed: "
 			<< GetLastError() << endl;
 		return 1;
 	}
@@ -170,7 +170,7 @@ int WinTimer::cancelTimer()
 {
 	if (!CancelWaitableTimer(timer))
 	{
-		std::cout << "CancelWaitableTimer failed: " 
+		cerr << "CancelWaitableTimer failed: " 
 			<< GetLastError() << endl;
 		return 1;
 	}

@@ -11,14 +11,14 @@ using namespace std;
 -- DATE: Mar. 29, 2017
 --
 -- REVISIONS: 
--- Version 1.0 - [EY] - 2016/Mar/29 - DESCRIPTION 
+-- Version 1.0 - [EY] - 2016/Mar/29 - Comment Added 
 --
 -- DESIGNER: Eva Yu
 --
 -- PROGRAMMER: Eva Yu
 --
 -- INTERFACE:  SoundFilePacketizer (int size)
--- int size -- size of each packet 
+-- int size -- size of each packet, defaults to 1024 
 --
 -- NOTES:
 -- ctor
@@ -34,14 +34,13 @@ SoundFilePacketizer::SoundFilePacketizer(int size)
 -- DATE: Mar. 29, 2017
 --
 -- REVISIONS: 
--- Version 1.0 - [EY] - 2016/Mar/29 - DESCRIPTION 
+-- Version 1.0 - [EY] - 2016/Mar/29 - Comment aded 
 --
 -- DESIGNER: Eva Yu
 --
 -- PROGRAMMER: Eva Yu
 --
--- INTERFACE:  SoundFilePacketizer (int size)
--- int size -- size of each packet 
+-- INTERFACE:  ~SoundFilePacketizer ()
 --
 -- NOTES:
 -- dtor
@@ -49,7 +48,7 @@ SoundFilePacketizer::SoundFilePacketizer(int size)
 
 SoundFilePacketizer::~SoundFilePacketizer()
 {
-	if (fp)
+	if (fp) // closes file if is is open 
 	{
 		closeFile();
 	}
@@ -61,17 +60,19 @@ SoundFilePacketizer::~SoundFilePacketizer()
 -- DATE: Mar. 29, 2017
 --
 -- REVISIONS: 
--- Version 1.0 - [EY] - 2016/Mar/29 - DESCRIPTION 
+-- Version 1.0 - [EY] - 2016/Mar/29 - Comment added
+-- Version 1.0 - [EY] - 2016/Apr/09 - updated for audio file sending
 --
 -- DESIGNER: Eva Yu
 --
 -- PROGRAMMER: Eva Yu
 --
--- INTERFACE:  SoundFilePacketizer (int size)
--- int size -- size of each packet 
+-- INTERFACE:  getNextPacket ()
 --
 -- NOTES:
--- reutrns the value of the next packet		
+-- reutrns a pointer to the next packet (char * )
+-- In order to not loose the data after you call makePacketsFromFile
+-- you must do a memset on the data
 --------------------------------------------------------------------------*/
 char * SoundFilePacketizer::getNextPacket()
 {
@@ -123,14 +124,14 @@ long SoundFilePacketizer::getTotalPackets()
 --
 -- PROGRAMMER: Eva Yu
 --
--- INTERFACE: long getTotalPackets (functionParams)
+-- INTERFACE: long getTotalPackets ()
 --
 -- RETURNS:
 -- long that represents the number of packets to send
 --
 -- NOTES:
 -- calcs the number of packets to send when a file is broken down
--- to a specific byte suize per packet
+-- to a specific byte size per packet
 --------------------------------------------------------------------------*/
 int SoundFilePacketizer::getLastPackSize()
 {
@@ -149,10 +150,10 @@ int SoundFilePacketizer::getLastPackSize()
 --
 -- PROGRAMMER: Eva Yu
 --
--- INTERFACE: void makePacketsFromFile()
+-- INTERFACE: void clearVector()
 --
 -- NOTES:
--- clears out the vector. be warned! this is call every time you make 
+-- clears out the vector. be warned! this is called every time you make 
 -- a new file! 
 --------------------------------------------------------------------------*/
 void SoundFilePacketizer::clearVector()
@@ -180,15 +181,15 @@ void SoundFilePacketizer::clearVector()
 --
 -- PROGRAMMER: Eva Yu
 --
--- INTERFACE: vectro<Packet *> makePacketsFromFile(File* pfile, int packsize)
--- FILE * pfile - pointer to hte file
--- int packsize - the size of each packet to make, in bytes
+-- INTERFACE: void makePacketsFromFile(fpath)
+-- const char * fpath -- the files path
 --
 -- RETURNS: 
 -- a vector of pointers to packets
 --
 -- NOTES:
--- this function creates a vector pf packets and passes it back 
+-- creates packets of *packsize* bytes for the entire files 
+-- and stores it into a vector of the class
 --------------------------------------------------------------------------*/
 
 void SoundFilePacketizer::makePacketsFromFile(const char * fpath)
@@ -301,14 +302,11 @@ void SoundFilePacketizer::closeFile()
 --
 -- PROGRAMMER: Eva Yu
 --
--- INTERFACE: logn getFileSize (FIEL * pfile)
--- FIEL * pfile the file pointer
+-- INTERFACE: logn calcFileSize ()
 --
--- RETURNS:
--- long repersenting the size of the file ( in BYTES )
 --
 -- NOTES:
--- gets the size of the file
+-- gets the size of the file and stores it in class member "filesize"
 --------------------------------------------------------------------------*/
 void SoundFilePacketizer::calcFileSize()
 {
