@@ -39,7 +39,6 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 
-
 #define BACKLOG 5
 #define PORT 13456
 #define PORT_STR  "13456"
@@ -95,6 +94,10 @@ inline int setSockOpt(int sock, int level, int cmd, void * req, const int reqlen
 
 inline int addToMcastGroup(int sock, ip_mreq & mreq)
 {
+	// make multicast group 
+	//ip_mreq mreq;
+	//mreq.imr_multiaddr.s_addr = inet_addr(MCAST_IP);
+	//mreq.imr_interface.s_addr = INADDR_ANY;
 	return setSockOpt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(ip_mreq));
 }
 

@@ -44,18 +44,19 @@ class SoundFilePacketizer
 public:
 	SoundFilePacketizer(const int packsize = DEFAULT_PACKSIZE);
 	~SoundFilePacketizer();
-	std::string getNextPacket();
+	char * getNextPacket();
 	void makePacketsFromFile(const char * fpath);
 	long getFileSize() { return filesize; };
 	long getTotalPackets();
 	long getPacketIndex() { return packindex; };
-
+	int  getLastPackSize();
 private:
 	void openFile(const char * fpath);
 	void closeFile();
 	void calcFileSize();
+	inline void clearVector();
 
-	std::vector <std::string> vPack;
+	std::vector <char *> vPack;
 	FILE * fp; // file pointer 
 	long filesize; // total size of file 
 	long packsize; // size of each packet 
