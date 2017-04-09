@@ -74,6 +74,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <PreprocessToFile>false</PreprocessToFile>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -114,6 +115,8 @@
     <ClInclude Include="Headers\libzplay.h" />
     <ClInclude Include="Headers\Main.h" />
     <ClInclude Include="Headers\AudioPlayer.h" />
+    <ClInclude Include="Headers\Microphone.h" />
+    <ClInclude Include="Headers\Network.h" />
     <ClInclude Include="Headers\Node.h" />
     <ClInclude Include="Headers\Semaphore.h" />
     <ClInclude Include="Headers\UI.h" />
@@ -123,6 +126,8 @@
     <ClCompile Include="Source\CBuff.cpp" />
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\AudioPlayer.cpp" />
+    <ClCompile Include="Source\Microphone.cpp" />
+    <ClCompile Include="Source\Network.cpp" />
     <ClCompile Include="Source\UI.cpp" />
   </ItemGroup>
   <ItemGroup>

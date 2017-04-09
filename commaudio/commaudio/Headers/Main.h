@@ -23,7 +23,8 @@
 #define WM_SOCKET (WM_USER + 0)
 
 //Windows Headers
-#include <gdiplus.h>
+#include <winsock2.h>
+#include <Windows.h>
 
 //C/C++ Headers
 #include <stdio.h>
@@ -34,8 +35,10 @@
 
 //Custom Headers
 #include "../Source/resource.h"
-#include "../Headers/UI.h"
-#include "../Headers/AudioPlayer.h"
+#include "UI.h"
+#include "AudioPlayer.h"
+#include "Network.h"
+
 
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
