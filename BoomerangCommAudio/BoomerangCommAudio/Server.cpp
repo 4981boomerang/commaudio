@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include <Winsock2.h>
+#include <WinBase.h>
 #include <chrono>
 #include <stdio.h>
 #include <string>
@@ -41,70 +42,6 @@ void RunServer(SOCKET& serverSock)
 	SocketInfo->DataBuf.len = BUF_SIZE;
 	//SocketInfo->Overlapped.hEvent = makeWSAEvent();
 
-	//
-	/*
-	int	n, ns, bytes_to_read;
-	int	client_len, port, err;
-	SOCKET sd, new_sd;
-	struct	sockaddr_in server, client;
-	WSADATA WSAData;
-	WORD wVersionRequested;
-
-	wVersionRequested = MAKEWORD(2, 2);
-	err = WSAStartup(wVersionRequested, &WSAData);
-	if (err != 0) //No useable DLL
-	{
-		wsprintf(temp, L"DLL not found!\n");
-		Display(temp);
-		exit(1);
-	}
-
-	// Create a stream socket
-	if ((sd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-	{
-		wsprintf(temp, L"Can't create a socket");
-		Display(temp);
-		exit(1);
-	}
-
-	// Initialize and set up the address structure
-	memset((char *)&server, 0, sizeof(struct sockaddr_in));
-	server.sin_family = AF_INET;
-	server.sin_port = htons(g_port);
-	server.sin_addr.s_addr = htonl(INADDR_ANY); // Accept connections from any client
-
-												// Bind an address to the socket
-	if (bind(sd, (struct sockaddr *)&server, sizeof(server)) == -1)
-	{
-		wsprintf(temp, L"Can't bind name to socket");
-		Display(temp);
-		exit(1);
-	}
-
-	// Listen for connections
-	// queue up to 5 connect requests
-	listen(sd, 5);
-
-	while (TRUE)
-	{
-		client_len = sizeof(client);
-		if ((new_sd = accept(sd, (struct sockaddr *)&client, &client_len)) == -1)
-		{
-			wsprintf(temp, L"Can't accept client\n");
-			Display(temp);
-			exit(1);
-		}
-
-		wsprintf(temp, L" Remote Address:  %s\n", inet_ntoa(client.sin_addr));
-		Display(temp);
-
-		closesocket(new_sd);
-	}
-	closesocket(sd);
-	WSACleanup();
-	*/
-
-	
 	if (!initializeWSA())
 		return;
 
@@ -197,8 +134,11 @@ void AcceptFunc()
 			Display(temp);
 			break;
 		}
+
+		char* acceptedClientIp = inet_ntoa(client.sin_addr);
 		SocketInfo->Socket = acceptedSocket;
-		wsprintf(temp, L"Socket number %d connected", acceptedSocket);
+		std::wstring strIP = GetWC(acceptedClientIp);
+		wsprintf(temp, L"Socket number %d connected: IP=%s", acceptedSocket, strIP.c_str());
 		Display(temp);
 
 		INFO_SONG infoSong;
@@ -378,7 +318,7 @@ void SaveFile(const std::string &fileName, std::vector<std::string> &data)
 	fclose(file);
 }
 
-BOOL RecvTCP(LPSOCKET_INFORMATION SocketInfo)
+bool RecvTCP(LPSOCKET_INFORMATION SocketInfo)
 {
 	char buffer[BUF_SIZE];
 	DWORD RecvBytes;
@@ -394,7 +334,7 @@ BOOL RecvTCP(LPSOCKET_INFORMATION SocketInfo)
 		{
 			wsprintf(temp, L"WSARecv() failed with error %d\n", WSAGetLastError());
 			Display(temp);
-			return FALSE;
+			return false;
 		}
 	}
 	else // No error so update the byte count
@@ -414,7 +354,7 @@ BOOL RecvTCP(LPSOCKET_INFORMATION SocketInfo)
 			SocketInfo->PacketsRECV++;
 		}
 	}
-	return TRUE;
+	return true;
 
 }
 
@@ -450,8 +390,45 @@ void DecodeHeader(char* header, LPSOCKET_INFORMATION SocketInfo)
 
 }
 
-BOOL sendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
+bool sendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 {
+	wchar_t temp[STR_SIZE];
+
+	ZeroMemory(&SocketInfo->Overlapped, sizeof(WSAOVERLAPPED));
+	SocketInfo->Overlapped.hEvent = WSACreateEvent();
+
+	if (WSASend(SocketInfo->Socket, &(SocketInfo->DataBuf), 1, &SocketInfo->BytesSEND,
+		0, &(SocketInfo->Overlapped), NULL) == SOCKET_ERROR)
+	{
+		if (WSAGetLastError() != ERROR_IO_PENDING)
+		{
+			wsprintf(temp, L"TCPControlWorker::SendToClient() WSASend() failed with: ", WSAGetLastError());
+			Display(temp);
+			return false;
+		}
+
+		if (WSAWaitForMultipleEvents(1, &SocketInfo->Overlapped.hEvent, FALSE, INFINITE, FALSE) == WAIT_TIMEOUT)
+		{
+			wsprintf(temp, L"TCPControlWorker::SendToClient timed out");
+			Display(temp);
+			return false;
+		}
+	}
+
+	DWORD flags;
+	if (!WSAGetOverlappedResult(SocketInfo->Socket, &(SocketInfo->Overlapped),
+		&SocketInfo->BytesSEND, FALSE, &flags))
+	{
+		wsprintf(temp,  L"TCPControlWorker::SendToClient overlappedresult error", WSAGetLastError());
+		return false;
+	}
+
+	wsprintf(temp, L"Sent %d bytes", SocketInfo->BytesSEND);
+	Display(temp);
+
+	return true;
+
+	/*
 	DWORD SendBytes;
 	wchar_t temp[STR_SIZE];
 
@@ -474,4 +451,5 @@ BOOL sendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 	}
 
 	return TRUE;
+	*/
 }
