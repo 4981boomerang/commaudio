@@ -21,6 +21,9 @@
     <ClCompile Include="ClientTCP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Packetizer\Packetizer\Packetizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MenuSettings.h">
@@ -33,6 +36,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="libzplay.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Packetizer\Packetizer\Packetizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

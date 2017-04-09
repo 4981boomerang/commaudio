@@ -60,10 +60,10 @@ using namespace std;
 CBuff::CBuff()
 	:_head(0),
 	_tail(0),
-	_buffSize(DEFAULT_SIZE),
-	_capacity(DEFAULT_SIZE),
+	_buffSize(DEFAULT_CBUFF_SIZE),
+	_capacity(DEFAULT_CBUFF_SIZE),
 	_semHead(0),
-	_semTail(DEFAULT_SIZE)
+	_semTail(DEFAULT_CBUFF_SIZE)
 {
 }
 
@@ -110,11 +110,11 @@ void CBuff::empty()
 -- stores a string into the next available slot in the circular buffer
 -- if the buffer is filled, the push will block until space becomes free
 --------------------------------------------------------------------------*/	
-void CBuff::push_back(string str)
+void CBuff::push_back(char * str)
 {	
 	// make sure you can insert, else wait
 	_semTail.wait();
-	_buff[ (_tail++) % _buffSize] = str;
+	memcpy(_buff[(_tail++) % _buffSize], str, DEFAULT_CHARARR_SIZE);
 	--_capacity;
 	_semHead.signal();
 }
@@ -139,86 +139,13 @@ void CBuff::push_back(string str)
 -- in the circular buffer.
 -- if the buffer is filled, the push will block until space becomes populated
 --------------------------------------------------------------------------*/	
-string & CBuff::pop()
+char * CBuff::pop()
 {
 	 _semHead.wait();
-	string & temp = _buff[(_head++) % _buffSize];
+	char * temp = _buff[(_head++) % _buffSize];
 	++_capacity;
 	_semTail.signal();
 	return temp;
-}
-
-/*--------------------------------------------------------------------------
--- FUNCTION: peek
---
--- DATE: MM. DD, 2017
---
--- REVISIONS: 
--- Version 1.0 - [EY] - 2016/MM/DD - DESCRIPTION 
---
--- DESIGNER: Eva Yu
---
--- PROGRAMMER: Eva Yu
---
--- INTERFACE: cosnt string str peek () 
---
--- NOTES:
--- takes the next item from the space pointed to at by the buffer
--- but does nto remove it from the buffer 
---------------------------------------------------------------------------*/
-const string & CBuff::peek() const
-{
-	return _buff[_tail];
-}
-
-/*--------------------------------------------------------------------------
--- FUNCTION: operator []
---
--- DATE: MM. DD, 2017
---
--- REVISIONS: 
--- Version 1.0 - [EY] - 2016/MM/DD - DESCRIPTION 
---
--- DESIGNER: Eva Yu
---
--- PROGRAMMER: Eva Yu
---
--- INTERFACE: string & CBuff::operator[](int x)
---
--- NOTES:
--- [] operator overloaded 
---------------------------------------------------------------------------*/
-string & CBuff::operator[](int x)
-{
-	if (static_cast<int>(_tail + x) < _buffSize - _capacity)
-		return _buff[_tail + x];
-	else
-		throw OUT_OF_RANGE_ERROR;
-}
-
-/*--------------------------------------------------------------------------
--- FUNCTION: operator []
---
--- DATE: MM. DD, 2017
---
--- REVISIONS: 
--- Version 1.0 - [EY] - 2016/MM/DD - DESCRIPTION 
---
--- DESIGNER: Eva Yu
---
--- PROGRAMMER: Eva Yu
---
--- INTERFACE: const string & CBuff::operator[](int x) const
---
--- NOTES:
--- [] operator overloaded 
---------------------------------------------------------------------------*/
-const string & CBuff::operator[](int x) const
-{
-	if(static_cast<int>(_tail + x) < _buffSize - _capacity)
-		return _buff[_tail + x];
-	else
-		throw OUT_OF_RANGE_ERROR;
 }
 
 /*--------------------------------------------------------------------------
@@ -241,10 +168,10 @@ const string & CBuff::operator[](int x) const
 -- NOTES:
 -- returns the space left in the buffer
 --------------------------------------------------------------------------*/
-unsigned int CBuff::getCapacity() const
-{
-	return _capacity;
-}
+//unsigned int CBuff::getCapacity() const
+//{
+//	return _capacity;
+//}
 
 /*--------------------------------------------------------------------------
 -- FUNCTION: isReadyForRead
