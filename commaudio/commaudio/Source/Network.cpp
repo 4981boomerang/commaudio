@@ -115,7 +115,7 @@ void CALLBACK compRoutine(DWORD error, DWORD transferred, LPWSAOVERLAPPED ol, DW
 	case 0:
 		AudioPlayer::instance().getBuf().push_back(rcvBufUDP.buf);
 
-		//empty the buffer
+		//empty the receiving buffer
 		memset(rcvBufUDP.buf, 0, sizeof(rcvBufUDP.buf));
 
 		//register again
@@ -132,6 +132,7 @@ void CALLBACK compRoutine(DWORD error, DWORD transferred, LPWSAOVERLAPPED ol, DW
 		break;
 
 	case WSA_OPERATION_ABORTED:
+		ui->showMessageBox("Error: Operation Aborted", "Operation Aborted", MB_OK | MB_ICONERROR);
 		clientStop(FALSE, TRUE);
 		break;
 

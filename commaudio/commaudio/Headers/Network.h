@@ -10,6 +10,7 @@
 //C/C++ Headers
 #include <iomanip>
 #include <fstream>
+#include <thread>
 
 #include "UI.h"
 #include "AudioPlayer.h"
