@@ -22,7 +22,7 @@
     <ProjectGuid>{F6AF1B10-1D00-453D-A1C7-EF0A3DABA676}</ProjectGuid>
     <RootNamespace>Packetizer</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
-    <ProjectName>CommAudio</ProjectName>
+    <ProjectName>CommAudioServer</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

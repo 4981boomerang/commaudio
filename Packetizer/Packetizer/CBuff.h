@@ -28,7 +28,7 @@
 -- PROGRAMMER: Eva Yu
 --
 -- NOTES:
--- Circular Buffer class that uses 
+-- Circular Buffer class that uses char * arrays
 ------------------------------------------------------------------------------*/
 #pragma once
 #include <array>
@@ -54,11 +54,6 @@ public:
 	void empty();
 	void push_back(char * str);
 	char * pop();
-	//const unique_ptr<char[]> & peek() const;
-	
-	//char * operator[] (int x);
-	//const char * operator[] (int x) const;
-
 	unsigned int getCapacity() const { return _capacity; };
 	bool isReadyForRead(double percentage = 0.5) const;
 

@@ -4,13 +4,14 @@
 -- PROGRAM: COMP4985 A4
 --
 -- FUNCTIONS:
--- 		SoundFilePacketizer(const int packsize = DEFAULT_PACKSIZE)
--- 		~SoundFilePacketizer()
--- 		std::string & getNextPacket()
--- 		void makePacketsFromFile(const char * fpath)
--- 		long getFileSize() 
--- 		long getTotalPackets()
--- 		long getPacketIndex() 
+--		SoundFilePacketizer(const int packsize = DEFAULT_PACKSIZE);
+--		~SoundFilePacketizer();
+--		char * getNextPacket();
+--		void makePacketsFromFile(const char * fpath);
+--		long getFileSize() { return filesize; };
+--		long getTotalPackets();
+--		long getPacketIndex() { return packindex; };
+--		int  getLastPackSize();
 -- 		void openFile(const char * fpath)
 -- 		void closeFile()
 -- 		void calcFileSize()
