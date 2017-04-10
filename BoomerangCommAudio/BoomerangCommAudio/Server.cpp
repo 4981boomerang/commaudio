@@ -1,32 +1,348 @@
 #include "stdafx.h"
-#include <Winsock2.h>
-#include <WinBase.h>
-#include <chrono>
-#include <stdio.h>
-#include <string>
-#include <vector>
-#include <thread>
-#include "Common.h"
 #include "Server.h"
 #include "SocketWrappers.h"
+
+//#include <WinBase.h>
+#include <string>
+#include <thread>
+#include <iostream>
+#include <string.h>
+#include <iterator>
 
 #pragma comment(lib, "Ws2_32.lib")
 #pragma warning(disable: 4996)
 
-using namespace std::chrono;
-
-SOCKET tcp_listen;
-LPSOCKET_INFORMATION SocketInfo;
-RecvTimer recvTimer;
-high_resolution_clock::time_point startTime;
-high_resolution_clock::time_point endTime;
-
-void RunServer(SOCKET& serverSock)
+//using namespace std;
+using std::cerr;
+using std::cout;
+using std::endl;
+using std::string;
+/*--------------------------------------------------------------------------
+-- FUNCTION: Server
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS:
+-- Version 1.0 - [EY] - 2016/APR/09 - Comment Added
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE:  Server ()
+--
+-- NOTES:
+-- Ctor
+--------------------------------------------------------------------------*/
+Server::Server()
+	:isStreaming(false)
 {
-	DWORD Ret;
-	SOCKADDR_IN InternetAddr;
-	WSADATA wsaData;
+	initializeWSA();
+	// load map of songs
+	sockUDP = makeWSASocket(SOCK_DGRAM, 0);
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: Server
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS:
+-- Version 1.0 - [EY] - 2016/APR/09 - Comment Added
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE:  Server ()
+--
+-- NOTES:
+-- Dtor
+--------------------------------------------------------------------------*/
+Server::~Server()
+{
+	if (isStreaming)
+		stopStream();
+	closeWSA();
+	GlobalFree(SocketInfo);
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: startStream
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS:
+-- Version 1.0 - [EY] - 2016/APR/09 - Comment added
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE: void startStream ()
+--  desc
+--
+-- RETURNS:
+-- RETURN
+--
+-- NOTES:
+-- Starts the UDP Streaming of songs.
+-- creates a thread for packetizatio and a thread for streaming
+-- **** make sure the Library is loaded when calling start stream !
+--------------------------------------------------------------------------*/
+void Server::startStream()
+{
+
+	// get file name library
+	isStreaming = true;
+	// make threads for streaming 1 for pack , 1 for send
+	packThread = streamPack();
+	sendThread = streamSend();
+
+	return;
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: loadLibrary
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS:
+-- Version 1.0 - [EY] - 2016/APR/09 - Commented the code
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE:  loadLibrary (const char * libpath)
+-- const char * libpath : The path the the directory of the library
+--							The deafult for the path is in server.h
+--
+--
+-- NOTES:
+-- This function loads  all the mp3 files found in the folder
+-- * Future versions may also extend to .wav , .flac , etc .
+--------------------------------------------------------------------------*/
+void Server::loadLibrary(const char * libpath)
+{
+	// look for mp3 files only
+	static const char * rgx = "*.mp3";
+
+	// if library has already been loaded, 
+	if (playlist.size() != 0)
+	{
+		if (isStreaming) //you must stop streaming first!
+		{
+			cerr << "Streaming must stop before loading library."
+				<< endl;
+			return;
+		}
+		else {
+			playlist.clear();
+		}
+	}
+
+	int sid = 0; // song id assiocated with map 
+	string path = "";
+	(path = libpath).append(rgx);
+	WIN32_FIND_DATA winfd;
+	HANDLE hFind = FindFirstFile(path.c_str(), &winfd);
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			// if it is a file and not a directory
+			if (!(winfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+				// add file path and name of file to map
+				(playlist[sid++] = libpath).append(winfd.cFileName);
+			}
+		} while (FindNextFile(hFind, &winfd));
+		FindClose(hFind);
+	}
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: stopStream
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS:
+-- Version 1.0 - [EY] - 2016/APR/09 - Commented
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE: void stopStream ()
+--
+--
+-- RETURNS:
+--
+-- NOTES:
+-- called when the streaming wants to be aborted entirely ( Note, this is not a pause )
+--------------------------------------------------------------------------*/
+void Server::stopStream()
+{
+	isStreaming = false;
+	//join thread stream Send Loop
+	sendThread.join();
+	packThread.join();
+	//join thread Stream Pack Loop
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: streamPackLoop
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS:
+-- Version 1.0 - [EY] - 2016/APR/09 - Comment added
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE: void streamPackLoop ()
+--
+--
+-- NOTES:
+-- this is a the thread loop for
+-- thread will exit when somone stops streaming
+-- Continuously loop through the map of songs ( loop back play )
+-- and packetize each song
+-- Once the cBuff has the last packet of the song, the next song will
+-- be packetized.
+--------------------------------------------------------------------------*/
+void Server::streamPackLoop()
+{
+	while (isStreaming)
+	{
+		//continuously loop through the map of songs
+		for (std::map<int, std::string>::iterator it = playlist.begin(); it != playlist.end(); ++it)
+		{
+			packer.makePacketsFromFile(it->second.c_str());
+			long ttl = packer.getTotalPackets();
+			for (long i = 0; i < ttl; ++i)
+			{
+				if (!isStreaming) break;
+				cbuff.push_back(packer.getNextPacket());
+			}
+		}
+	}
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: streamSendLoop
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS:
+-- Version 1.0 - [EY] - 2016/APR/09 - Comment
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE:  streamSendLoop ()
+--
+-- NOTES:
+-- This is the thread loop for the streaming.
+-- the loop will exit when the flag exits
+-- the initial 21K of a song is sent every 2 milliseconds
+-- after that, the data slows down at sending rate that matches the speed
+-- of streaming
+--------------------------------------------------------------------------*/
+void Server::streamSendLoop()
+{
+	sockaddr_in addr;
+	char * pstr;
+	int bsent;
+	const long long initialLoadInterval = -20000LL; // 2 MS
+	const long long initialLoadSize = 21;
+	const long long regularLoadInterval = -1000000LL; // 100 MS
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	inet_pton(AF_INET, MCAST_IP, &(addr.sin_addr.s_addr));
+	addr.sin_port = htons(PORTNO);
+
+	while (isStreaming)
+	{
+		//get info of next song
+		long ttl = packer.getTotalPackets();
+		long lastpsz = packer.getLastPackSize();
+		timer.cancelTimer();
+		timer.setTimer(initialLoadInterval);
+
+		//end the song
+		for (long i = 0; i < ttl; ++i)
+		{
+			if (!isStreaming) break;
+			// if it is no longer the intial part of the song
+			if (i == initialLoadSize)
+			{
+				// reset due time to regulkar mp3 rates
+				timer.cancelTimer();
+				timer.setTimer(regularLoadInterval);
+			}
+
+			timer.resetTimer();
+			if (waitForTimer())
+			{
+				pstr = cbuff.pop(); // get next pack 
+				if (!pstr)
+					continue;
+
+				bsent = sendto(sockUDP, pstr, BUFFSIZE, 0, (struct sockaddr *)&addr, sizeof(addr));
+				cout << "Bytes sent: " << bsent << "\n";
+			}
+		}
+		if (!isStreaming) break;
+		pstr = cbuff.pop(); //send last pack 
+		if (pstr)
+			bsent = sendto(sockUDP, pstr, lastpsz, 0, (struct sockaddr *)&addr, sizeof(addr));
+		cout << "Bytes sent: " << bsent << "\n";
+	}
+}
+
+/*--------------------------------------------------------------------------
+-- FUNCTION: waitForTimer
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS:
+-- Version 1.0 - [EY] - 2016/APR/09 - Comment
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE: inline bool waitForTimer ()
+--  desc
+--
+-- RETURNS:
+-- boolean -- whether the timer object tiggered the event
+--
+-- NOTES:
+-- a wait for event function wrapper
+-- that specifically waits for a timer object
+--------------------------------------------------------------------------*/
+inline bool Server::waitForTimer()
+{
+	if (WaitForSingleObject(timer.getTimer(), INFINITE) != WAIT_OBJECT_0)
+	{
+		printf("WaitForSingleObject failed (%d)\n", GetLastError());
+		return false;
+	}
+	return true;
+}
+
+/*****************************************************************************
+								Jamies portion
+*****************************************************************************/
+void Server::RunServer(SOCKET& serverSock)
+{
 	wchar_t temp[STR_SIZE];
+
+	InitializeCriticalSection(&CriticalSection);
 
 	if ((SocketInfo = (LPSOCKET_INFORMATION)GlobalAlloc(GPTR,
 		sizeof(SOCKET_INFORMATION))) == NULL)
@@ -40,13 +356,11 @@ void RunServer(SOCKET& serverSock)
 	SocketInfo->BytesSEND = 0;
 	SocketInfo->PacketsRECV = 0;
 	SocketInfo->DataBuf.len = BUF_SIZE;
-	//SocketInfo->Overlapped.hEvent = makeWSAEvent();
 
 	if (!initializeWSA())
 		return;
 
 	// create a socket.
-	//if ((tcp_listen = makeWSASocket(SOCK_STREAM, 0)) == INVALID_SOCKET)
 	if ((tcp_listen = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
 		return;
 
@@ -57,8 +371,7 @@ void RunServer(SOCKET& serverSock)
 	server.sin_addr.s_addr = htonl(INADDR_ANY); // Accept connections from any client
 
 	// Bind an address to the socket
-	//bindSocket(tcp_listen, htons(g_port));
-	if (bind(tcp_listen, (struct sockaddr *)&server, sizeof(server)) == -1)
+	if ( bind(tcp_listen, (struct sockaddr *)&server, sizeof(server)) == -1)
 		return;
 
 	if (listen(tcp_listen, MAX_NUM_CLIENT) == SOCKET_ERROR)
@@ -68,62 +381,31 @@ void RunServer(SOCKET& serverSock)
 		return;
 	}
 
+	if ((EventArray[0] = WSACreateEvent()) == WSA_INVALID_EVENT)
+	{
+		wsprintf(temp, L"WSACreateEvent() failed with error %d", WSAGetLastError());
+		Display(temp);
+		return;
+	}
+	AcceptEvent = EventArray[0];
+
 	wsprintf(temp, L"Listen TCP port %d", g_port);
 	Display(temp);
 
-	std::thread threadAccept(AcceptFunc);
+	std::thread threadAccept(&Server::AcceptFunc, this);
 	threadAccept.detach();
 
-
-	// Prepare echo server
-	/*if ((Ret = WSAStartup(0x0202, &wsaData)) != 0)
-	{
-		wsprintf(temp, L"WSAStartup failed with error %d\n", Ret);
-		Display(temp);
-		return;
-	}
-
-	if ((tcp_listen = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
-	{
-		wsprintf(temp, L"socket() failed with error %d\n", WSAGetLastError());
-		Display(temp);
-		return;
-	}
-
-	WSAAsyncSelect(tcp_listen, g_hMainDlg, WM_TCP_SERVER_LISTEN, FD_ACCEPT | FD_CLOSE);
-
-	InternetAddr.sin_family = AF_INET;
-	InternetAddr.sin_addr.s_addr = inet_addr(g_IP);
-	InternetAddr.sin_port = htons(g_port);
-
-	if (bind(tcp_listen, (PSOCKADDR)&InternetAddr, sizeof(InternetAddr)) == SOCKET_ERROR)
-	{
-		wsprintf(temp, L"bind() failed with error %d\n", WSAGetLastError());
-		Display(temp);
-		return;
-	}
-
-	if (listen(tcp_listen, 1))
-	{
-		wsprintf(temp, L"listen() failed with error %d\n", WSAGetLastError());
-		Display(temp);
-		return;
-	}
-
-	wsprintf(temp, L"Listen TCP port %d", g_port);
-	Display(temp);
-
-	PostMessage(g_hMainDlg, WM_CONNECT_SERVER, NULL, NULL);
-	*/
-
+	std::thread workThread(&Server::WorkThread, this);
+	workThread.detach();
 }
 
-void AcceptFunc()
+void Server::AcceptFunc()
 {
 	int client_len;
 	struct	sockaddr_in client;
 	wchar_t temp[STR_SIZE];
 
+	EventTotal = 1;
 	while (true)
 	{
 		client_len = sizeof(client);
@@ -141,6 +423,87 @@ void AcceptFunc()
 		wsprintf(temp, L"Socket number %d connected: IP=%s", acceptedSocket, strIP.c_str());
 		Display(temp);
 
+		SendInitialInfo(acceptedSocket, SocketInfo);
+
+		// Mapping the accepted client.
+		ClientInformation clientInformation;
+		sprintf(clientInformation.ip, "%s", acceptedClientIp);
+		sprintf(clientInformation.username, "%s", "Unknown");
+		mapClient[acceptedSocket] = clientInformation;
+
+		// completion routines
+		EnterCriticalSection(&CriticalSection);
+
+		// Create a socket information structure to associate with the accepted socket.
+		if ((SocketArray[EventTotal] = (LPSOCKET_INFORMATION)GlobalAlloc(GPTR,
+			sizeof(SOCKET_INFORMATION))) == NULL)
+		{
+			wsprintf(temp, L"GlobalAlloc() failed with error %d\n", GetLastError());
+			Display(temp);
+			return;
+		}
+
+		// Fill in the details of our accepted socket.
+		SocketArray[EventTotal]->Socket = acceptedSocket;
+		ZeroMemory(&(SocketArray[EventTotal]->Overlapped), sizeof(OVERLAPPED));
+		SocketArray[EventTotal]->BytesSEND = 0;
+		SocketArray[EventTotal]->BytesRECV = 0;
+		SocketArray[EventTotal]->DataBuf.len = BUF_SIZE;
+		SocketArray[EventTotal]->DataBuf.buf = SocketArray[EventTotal]->Buffer;
+
+		if ((SocketArray[EventTotal]->Overlapped.hEvent = EventArray[EventTotal] =
+			WSACreateEvent()) == WSA_INVALID_EVENT)
+		{
+			wsprintf(temp, L"WSACreateEvent() failed with error %d", WSAGetLastError());
+			Display(temp);
+			return;
+		}
+
+		DWORD Flags = 0;
+		DWORD RecvBytes;
+		if (WSARecv(SocketArray[EventTotal]->Socket,
+			&(SocketArray[EventTotal]->DataBuf), 1, &RecvBytes, &Flags,
+			&(SocketArray[EventTotal]->Overlapped), NULL) == SOCKET_ERROR)
+		{
+			if (WSAGetLastError() != ERROR_IO_PENDING)
+			{
+				wsprintf(temp, L"WSARecv() failed with error %d", WSAGetLastError());
+				Display(temp);
+				return;
+			}
+		}
+
+		EventTotal++;
+
+		LeaveCriticalSection(&CriticalSection);
+
+		//
+		// Signal the first event in the event array to tell the worker thread to
+		// service an additional event in the event array
+		//
+		if (WSASetEvent(AcceptEvent) == FALSE)
+		{
+			wsprintf(temp, L"WSASetEvent failed with error %d", WSAGetLastError());
+			Display(temp);
+			return;
+		}
+	}
+}
+
+void Server::SendInitialInfo(SOCKET socket, LPSOCKET_INFORMATION SocketInfo)
+{
+	for (const auto& entry : mapClient)
+	{
+		INFO_CLIENT infoClient;
+		infoClient.header = PH_INFO_CLIENT;
+		sprintf_s(infoClient.username, PACKET_STR_MAX, "%s", entry.second.username);
+		sprintf_s(infoClient.ip, IP_LENGTH, "%s", entry.second.ip);
+		SocketInfo->DataBuf.buf = (char*)&infoClient;
+		SocketInfo->DataBuf.len = sizeof(INFO_CLIENT);
+		SendTCP(socket, SocketInfo);
+	}
+
+	{
 		INFO_SONG infoSong;
 		infoSong.header = PH_INFO_SONG;
 		infoSong.SID = 1;
@@ -148,249 +511,74 @@ void AcceptFunc()
 		sprintf_s(infoSong.artist, PACKET_STR_MAX, "%s", "Artist of a song");
 		SocketInfo->DataBuf.buf = (char*)&infoSong;
 		SocketInfo->DataBuf.len = sizeof(INFO_SONG);
-		sendTCP(acceptedSocket, SocketInfo);
-
-		INFO_CLIENT infoClient;
-		infoClient.header = PH_INFO_CLIENT;
-		sprintf_s(infoClient.username, PACKET_STR_MAX, "%s", "luxes");
-		sprintf_s(infoClient.ip, IP_LENGTH, "%s", "192.168.0.22");
-		SocketInfo->DataBuf.buf = (char*)&infoClient;
-		SocketInfo->DataBuf.len = sizeof(INFO_CLIENT);
-		sendTCP(acceptedSocket, SocketInfo);
+		SendTCP(socket, SocketInfo);
 	}
 }
 
-LRESULT CALLBACK ServerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, SOCKET& sock)
+void Server::WorkThread()
 {
-	wchar_t temp[STR_SIZE];
-
-	if (WSAGETSELECTERROR(lParam))
-	{
-		wsprintf(temp, L"Socket failed with error %d", WSAGETSELECTERROR(lParam));
-		Display(temp);
-		//CloseServer(sock);
-		return 1;
-	}
-	switch (uMsg) {
-	case WM_TCP_SERVER_LISTEN:
-		switch (WSAGETSELECTEVENT(lParam))
-		{
-		case FD_ACCEPT:
-			if ((sock = accept(wParam, NULL, NULL)) == INVALID_SOCKET)
-			{
-				wsprintf(temp, L"accept() failed with error %d", WSAGetLastError());
-				Display(temp);
-				break;
-			}
-			SocketInfo->Socket = sock;
-			wsprintf(temp, L"Socket number %d connected", sock);
-			Display(temp);
-
-			WSAAsyncSelect(sock, hwnd, WM_SOCKET_TCP, FD_READ | FD_CLOSE);
-
-			{	// TODO: send the # of songs(control msg), the info of all songs separately, # of clients(control msg), info of all clients separately.
-				/*CONTROL_MSG msgNumSongs;
-				msgNumSongs.header = PH_NUM_OF_SONGS;
-				msgNumSongs.msg = { 1 };
-				SocketInfo->DataBuf.buf = (char*)&msgNumSongs;
-				SocketInfo->DataBuf.len = sizeof(CONTROL_MSG);
-				sendTCP(sock, SocketInfo);*/
-
-				INFO_SONG infoSong;
-				infoSong.header = PH_INFO_SONG;
-				infoSong.SID = 1;
-				sprintf_s(infoSong.title, PACKET_STR_MAX, "%s", "Title of a song");
-				sprintf_s(infoSong.artist, PACKET_STR_MAX, "%s", "Artist of a song");
-				SocketInfo->DataBuf.buf = (char*)&infoSong;
-				SocketInfo->DataBuf.len = sizeof(INFO_SONG);
-				sendTCP(sock, SocketInfo);
-
-				/*CONTROL_MSG msgNumClients;
-				msgNumClients.header = PH_NUM_OF_CLIENT;
-				msgNumClients.msg = { 1 };
-				SocketInfo->DataBuf.buf = (char*)&msgNumClients;
-				SocketInfo->DataBuf.len = sizeof(CONTROL_MSG);
-				sendTCP(sock, SocketInfo);*/
-
-				INFO_CLIENT infoClient;
-				infoClient.header = PH_INFO_CLIENT;
-				sprintf_s(infoClient.username, PACKET_STR_MAX, "%s", "luxes");
-				sprintf_s(infoClient.ip, IP_LENGTH, "%s", "192.168.0.22");
-				SocketInfo->DataBuf.buf = (char*)&infoClient;
-				SocketInfo->DataBuf.len = sizeof(INFO_CLIENT);
-				sendTCP(sock, SocketInfo);
-			}
-
-			break;
-		case FD_CLOSE:
-			//CloseServer(sock);
-			break;
-		}
-		break;
-	case WM_SOCKET_TCP:
-		switch (WSAGETSELECTEVENT(lParam))
-		{
-		case FD_READ:
-			if (!RecvTCP(SocketInfo))
-				break;
-			break;
-		case FD_CLOSE:
-			wsprintf(temp, L"Closing socket %d\n", sock);
-			Display(temp);
-			closesocket(sock);
-			break;
-		}
-		break;
-	}
-	return 0;
-}
-
-
-void CloseServer(SOCKET& sock)
-{
-	wchar_t temp[STR_SIZE];
-
-	if (sock) {
-		wsprintf(temp, L"Closing socket %d", sock);
-		Display(temp);
-		closesocket(sock);
-	}
-	if (tcp_listen) {
-		wsprintf(temp, L"Closing listen socket %d", tcp_listen);
-		Display(temp);
-		closesocket(tcp_listen);
-	}
-	PostMessage(g_hMainDlg, WM_DISCONNECT_SERVER, NULL, NULL);
-	GlobalFree(SocketInfo);
-}
-
-void recvTimeout()
-{
-	wchar_t temp[STR_SIZE] = L"";
-	endTime = high_resolution_clock::now();
-	auto duration = duration_cast<microseconds>(endTime - startTime).count();
-	double timeGap = (double)duration;
-	wsprintf(temp, L"Packet Size: %d bytes", SocketInfo->SentPacketSize);
-	Display(temp);
-	wsprintf(temp, L"Sent # of Packets: %d", SocketInfo->SentNumberPackets);
-	Display(temp);
-	wsprintf(temp, L"Sent total data: %d bytes", SocketInfo->SentBytesTotal);
-	Display(temp);
-	wsprintf(temp, L"Received # of Packets: %d", SocketInfo->PacketsRECV);
-	Display(temp);
-	wsprintf(temp, L"Received total data %d bytes", SocketInfo->BytesRECV);
-	Display(temp);
-	if (SocketInfo->IsFile)
-	{
-		std::string recvFileName(std::string("recv_" + SocketInfo->FileName));
-		std::wstring strTemp(recvFileName.begin(), recvFileName.end());
-		wsprintf(temp, L"File Name: %s", strTemp.c_str());
-		Display(temp);
-		SaveFile(recvFileName, SocketInfo->vecBuffer);
-	}
-
-	char temp2[STR_SIZE];
-	sprintf(temp2, "Elapsed Time: %0.2f us. Speed: %0.2f MB/s", timeGap, duration == 0 ? 0 : (double)(SocketInfo->BytesRECV / timeGap));
-	std::string strTemp(temp2);
-	std::wstring strTemp2(strTemp.begin(), strTemp.end());
-	Display(L"*****************************************");
-	Display(strTemp2.c_str());
-	Display(L"*****************************************");
-	Display(L" ");
-
-	SocketInfo->DataBuf.len = BUF_SIZE;
-}
-
-void SaveFile(const std::string &fileName, std::vector<std::string> &data)
-{
-	FILE* file;
-
-	file = fopen(fileName.c_str(), "wb");
-	if (file == NULL)
-	{
-		Display(L"Failed : Open File");
-		return;
-	}
-
-	for (size_t i = 0; i < data.size(); i++) {
-		fwrite(data[i].c_str(), 1, strlen(data[i].c_str()), file);
-	}
-	fclose(file);
-}
-
-bool RecvTCP(LPSOCKET_INFORMATION SocketInfo)
-{
-	char buffer[BUF_SIZE];
-	DWORD RecvBytes;
 	DWORD Flags;
+	LPSOCKET_INFORMATION SI;
+	DWORD Index;
+	DWORD RecvBytes;
+
 	wchar_t temp[STR_SIZE];
 
-	SocketInfo->DataBuf.buf = buffer;
+	// Save the accept event in the event array.
 
-	Flags = 0;
-	if (WSARecv(SocketInfo->Socket, &(SocketInfo->DataBuf), 1, &RecvBytes, &Flags, NULL, NULL) == SOCKET_ERROR)
+	EventArray[0] = AcceptEvent;
+
+	while (TRUE)
 	{
-		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		if ((Index = WSAWaitForMultipleEvents(EventTotal, EventArray, FALSE,
+			WSA_INFINITE, FALSE)) == WSA_WAIT_FAILED)
 		{
-			wsprintf(temp, L"WSARecv() failed with error %d\n", WSAGetLastError());
+			wsprintf(temp, L"WSAWaitForMultipleEvents failed %d", WSAGetLastError());
+			return;
+		}
+
+		// If the event triggered was zero then a connection attempt was made
+		// on our listening socket.
+
+		if ((Index - WSA_WAIT_EVENT_0) == 0)
+		{
+			WSAResetEvent(EventArray[0]);
+			continue;
+		}
+
+		SI = SocketArray[Index - WSA_WAIT_EVENT_0];
+		WSAResetEvent(EventArray[Index - WSA_WAIT_EVENT_0]);
+
+		// Create a socket information structure to associate with the accepted socket.
+
+		if ((SocketInfo = (LPSOCKET_INFORMATION)GlobalAlloc(GPTR,
+			sizeof(SOCKET_INFORMATION))) == NULL)
+		{
+			wsprintf(temp, L"GlobalAlloc() failed with error %d", GetLastError());
 			Display(temp);
-			return false;
+			return;
 		}
-	}
-	else // No error so update the byte count
-	{
-		recvTimer.start();
-		std::string str(SocketInfo->DataBuf.buf);
-		bool exists = (str.find("HEADER") != std::string::npos);
-		if (exists) {
-			DecodeHeader(buffer, SocketInfo);
-			SocketInfo->BytesRECV = 0;
-			SocketInfo->PacketsRECV = 0;
-		}
-		else {
-			if (SocketInfo->IsFile)
-				SocketInfo->vecBuffer.push_back(std::string(buffer, RecvBytes));
-			SocketInfo->BytesRECV += RecvBytes;
-			SocketInfo->PacketsRECV++;
-		}
-	}
-	return true;
 
+		Flags = 0;
+		if (WSARecv(SI->Socket, &(SI->DataBuf), 1, &RecvBytes, &Flags,
+			&(SI->Overlapped), WorkerRoutine) == SOCKET_ERROR)
+		{
+			if (WSAGetLastError() != WSA_IO_PENDING)
+			{
+				wsprintf(temp, L"WSARecv() failed with error %d\n", WSAGetLastError());
+				Display(temp);
+				return;
+			}
+		}
+
+		wsprintf(temp, L"Recv from %d\n", SI->Socket);
+		Display(temp);
+	}
+
+	return;
 }
 
-void DecodeHeader(char* header, LPSOCKET_INFORMATION SocketInfo)
-{
-	Display(L"****************************** Start Receiving *******************************");
-	startTime = high_resolution_clock::now();
-	std::string strHeader(header);
-	std::vector<std::string> params;
-
-	std::string::size_type i = 0;
-	std::string::size_type j = strHeader.find(':');
-
-	while (j != std::string::npos) 
-	{
-		params.push_back(strHeader.substr(i, j - i));
-		i = ++j;
-		j = strHeader.find(':', j);
-
-		if (j == std::string::npos)
-			params.push_back(strHeader.substr(i, strHeader.length()));
-	}
-
-	SocketInfo->SentPacketSize = atoi(params[1].c_str());
-	SocketInfo->SentNumberPackets = atoi(params[2].c_str());
-	SocketInfo->SentBytesTotal = atoi(params[3].c_str());
-	SocketInfo->IsFile = atoi(params[4].c_str());
-	if (SocketInfo->IsFile)
-		SocketInfo->FileName = params[5];
-	SocketInfo->vecBuffer.clear();
-
-	SocketInfo->DataBuf.len = SocketInfo->SentPacketSize;
-
-}
-
-bool sendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
+bool Server::SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 {
 	wchar_t temp[STR_SIZE];
 
@@ -419,7 +607,7 @@ bool sendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 	if (!WSAGetOverlappedResult(SocketInfo->Socket, &(SocketInfo->Overlapped),
 		&SocketInfo->BytesSEND, FALSE, &flags))
 	{
-		wsprintf(temp,  L"TCPControlWorker::SendToClient overlappedresult error", WSAGetLastError());
+		wsprintf(temp, L"TCPControlWorker::SendToClient overlappedresult error", WSAGetLastError());
 		return false;
 	}
 
@@ -427,29 +615,90 @@ bool sendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 	Display(temp);
 
 	return true;
+}
 
-	/*
-	DWORD SendBytes;
-	wchar_t temp[STR_SIZE];
 
-	if (WSASend(SocketInfo->Socket, &(SocketInfo->DataBuf), 1, &SendBytes, 0, NULL, NULL) == SOCKET_ERROR)
+void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED Overlapped, DWORD InFlags)
+{
+	DWORD SendBytes, RecvBytes;
+	DWORD Flags;
+
+	// Reference the WSAOVERLAPPED structure as a SOCKET_INFORMATION structure
+	LPSOCKET_INFORMATION SI = (LPSOCKET_INFORMATION)Overlapped;
+
+	if (Error != 0)
 	{
-		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		printf("I/O operation failed with error %d\n", Error);
+	}
+
+	if (BytesTransferred == 0)
+	{
+		printf("Closing socket %d\n", static_cast<int>(SI->Socket));
+	}
+
+	if (Error != 0 || BytesTransferred == 0)
+	{
+		closesocket(SI->Socket);
+		GlobalFree(SI);
+		return;
+	}
+
+	// Check to see if the BytesRECV field equals zero. If this is so, then
+	// this means a WSARecv call just completed so update the BytesRECV field
+	// with the BytesTransferred value from the completed WSARecv() call.
+
+	if (SI->BytesRECV == 0)
+	{
+		SI->BytesRECV = BytesTransferred;
+		SI->BytesSEND = 0;
+	}
+	else
+	{
+		SI->BytesSEND += BytesTransferred;
+	}
+
+	if (SI->BytesRECV > SI->BytesSEND)
+	{
+
+		// Post another WSASend() request.
+		// Since WSASend() is not gauranteed to send all of the bytes requested,
+		// continue posting WSASend() calls until all received bytes are sent.
+
+		ZeroMemory(&(SI->Overlapped), sizeof(WSAOVERLAPPED));
+
+		SI->DataBuf.buf = SI->Buffer + SI->BytesSEND;
+		SI->DataBuf.len = SI->BytesRECV - SI->BytesSEND;
+
+		if (WSASend(SI->Socket, &(SI->DataBuf), 1, &SendBytes, 0,
+			&(SI->Overlapped), WorkerRoutine) == SOCKET_ERROR)
 		{
-			wsprintf(temp, L"WSASend() failed with error %d", WSAGetLastError());
-			Display(temp);
-			closesocket(clientSock);
-			return FALSE;
+			if (WSAGetLastError() != WSA_IO_PENDING)
+			{
+				printf("WSASend() failed with error %d\n", WSAGetLastError());
+				return;
+			}
 		}
 	}
 	else
 	{
-		SocketInfo->BytesSEND += SendBytes;
-		wsprintf(temp, L"Sent %d bytes", SendBytes);
-		Display(temp);
-		return TRUE;
-	}
+		SI->BytesRECV = 0;
 
-	return TRUE;
-	*/
+		// Now that there are no more bytes to send post another WSARecv() request.
+
+		Flags = 0;
+		ZeroMemory(&(SI->Overlapped), sizeof(WSAOVERLAPPED));
+
+		SI->DataBuf.len = DATA_BUFSIZE;
+		SI->DataBuf.buf = SI->Buffer;
+
+		if (WSARecv(SI->Socket, &(SI->DataBuf), 1, &RecvBytes, &Flags,
+			&(SI->Overlapped), WorkerRoutine) == SOCKET_ERROR)
+		{
+			if (WSAGetLastError() != WSA_IO_PENDING)
+			{
+				printf("WSARecv() failed with error %d\n", WSAGetLastError());
+				return;
+			}
+		}
+	}
 }

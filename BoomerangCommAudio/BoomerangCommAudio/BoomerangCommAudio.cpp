@@ -7,8 +7,7 @@
 #include "Common.h"
 #include "BoomerangCommAudio.h"
 #include "Server.h"
-#include "Client.h"
-#include "TCPServer.h"
+
 
 #define MAX_LOADSTRING 100
 
@@ -35,7 +34,7 @@ HWND hDisConnect;
 SOCKET serverSock;
 SOCKET clientSock;
 
-TCPServer tcpServer;
+Server tcpServer;
 
 // Forward declarations of functions included in this code module:
 BOOL                InitInstance(HINSTANCE, int);
