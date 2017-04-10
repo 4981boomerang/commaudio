@@ -42,7 +42,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -146,21 +146,22 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BoomerangCommAudio.h" />
-    <ClInclude Include="Client.h" />
+    <ClInclude Include="CBuff.h" />
     <ClInclude Include="Common.h" />
+    <ClInclude Include="Packetizer.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="Server.h" />
+    <ClInclude Include="Semaphore.h" />
     <ClInclude Include="SocketWrappers.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="TCPServer.h" />
-    <ClInclude Include="Timer.h" />
+    <ClInclude Include="Server.h" />
+    <ClInclude Include="WinTimer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BoomerangCommAudio.cpp" />
-    <ClCompile Include="Client.cpp" />
+    <ClCompile Include="CBuff.cpp" />
     <ClCompile Include="Common.cpp" />
-    <ClCompile Include="Server.cpp" />
+    <ClCompile Include="Packetizer.cpp" />
     <ClCompile Include="SocketWrappers.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -168,7 +169,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="TCPServer.cpp" />
+    <ClCompile Include="Server.cpp" />
+    <ClCompile Include="WinTimer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BoomerangCommAudio.rc" />

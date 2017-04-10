@@ -8,6 +8,7 @@
 --    SOCKET makeWSAOverlapSocket(int type);
 --    int closeConnection(SOCKET s);
 --    boolean closeWSA(void);
+
 --    int getHostByName(char * res, int size);
 --    int getHostIP(char * dest);
 --    int listenSocket(SOCKET s);
@@ -17,11 +18,13 @@
 --    struct addrinfo * getAddrInfo(const char * ip, const char * port, int type = SOCK_STREAM);
 --    int connectSock(SOCKET sock, struct addrinfo * ai);
 --    void * globalAlloc(int size);
+
 --
 -- DATE: MM. DD, 2016
 --
 -- REVISIONS:
 -- Version 1.0 - [EY] - 2016/MM/DD - DESCRIPTION
+
 -- DESIGNER: Eva Yu
 --
 -- PROGRAMMER: Eva Yu
@@ -35,7 +38,6 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
-
 
 #define BACKLOG 5
 #define PORT 13456
@@ -82,7 +84,7 @@ int connectSock(SOCKET sock, struct addrinfo * ai);
 --------------------------------------------------------------------------*/
 inline int setSockOpt(int sock, int level, int cmd, void * req, const int reqlen)
 {
-	if (setSockOpt(sock, level, cmd, req, reqlen) < 0)
+	if (setsockopt(sock, level, cmd,(char *)req, reqlen) < 0)
 	{
 		perror("setsockopt() error");
 		exit(1);
