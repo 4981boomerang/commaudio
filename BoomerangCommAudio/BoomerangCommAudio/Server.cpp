@@ -26,12 +26,12 @@ void RunServer(SOCKET& serverSock)
 	DWORD Ret;
 	SOCKADDR_IN InternetAddr;
 	WSADATA wsaData;
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	if ((SocketInfo = (LPSOCKET_INFORMATION)GlobalAlloc(GPTR,
 		sizeof(SOCKET_INFORMATION))) == NULL)
 	{
-		wsprintf(temp, L"GlobalAlloc() failed with error %d", GetLastError());
+		sprintf_s(temp, "GlobalAlloc() failed with error %d", GetLastError());
 		Display(temp);
 		return;
 	}
@@ -63,12 +63,12 @@ void RunServer(SOCKET& serverSock)
 
 	if (listen(tcp_listen, MAX_NUM_CLIENT) == SOCKET_ERROR)
 	{
-		wsprintf(temp, L"listen() failed with error %d", WSAGetLastError());
+		sprintf_s(temp, "listen() failed with error %d", WSAGetLastError());
 		Display(temp);
 		return;
 	}
 
-	wsprintf(temp, L"Listen TCP port %d", g_port);
+	sprintf_s(temp, "Listen TCP port %d", g_port);
 	Display(temp);
 
 	std::thread threadAccept(AcceptFunc);
@@ -78,14 +78,14 @@ void RunServer(SOCKET& serverSock)
 	// Prepare echo server
 	/*if ((Ret = WSAStartup(0x0202, &wsaData)) != 0)
 	{
-		wsprintf(temp, L"WSAStartup failed with error %d\n", Ret);
+		sprintf_s(temp, "WSAStartup failed with error %d\n", Ret);
 		Display(temp);
 		return;
 	}
 
 	if ((tcp_listen = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
 	{
-		wsprintf(temp, L"socket() failed with error %d\n", WSAGetLastError());
+		sprintf_s(temp, "socket() failed with error %d\n", WSAGetLastError());
 		Display(temp);
 		return;
 	}
@@ -98,19 +98,19 @@ void RunServer(SOCKET& serverSock)
 
 	if (bind(tcp_listen, (PSOCKADDR)&InternetAddr, sizeof(InternetAddr)) == SOCKET_ERROR)
 	{
-		wsprintf(temp, L"bind() failed with error %d\n", WSAGetLastError());
+		sprintf_s(temp, "bind() failed with error %d\n", WSAGetLastError());
 		Display(temp);
 		return;
 	}
 
 	if (listen(tcp_listen, 1))
 	{
-		wsprintf(temp, L"listen() failed with error %d\n", WSAGetLastError());
+		sprintf_s(temp, "listen() failed with error %d\n", WSAGetLastError());
 		Display(temp);
 		return;
 	}
 
-	wsprintf(temp, L"Listen TCP port %d", g_port);
+	sprintf_s(temp, "Listen TCP port %d", g_port);
 	Display(temp);
 
 	PostMessage(g_hMainDlg, WM_CONNECT_SERVER, NULL, NULL);
@@ -122,7 +122,7 @@ void AcceptFunc()
 {
 	int client_len;
 	struct	sockaddr_in client;
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	while (true)
 	{
@@ -130,15 +130,14 @@ void AcceptFunc()
 		SOCKET acceptedSocket;
 		if ((acceptedSocket = accept(tcp_listen, (struct sockaddr *)&client, &client_len)) == INVALID_SOCKET)
 		{
-			wsprintf(temp, L"accept() failed with error %d", WSAGetLastError());
+			sprintf_s(temp, "accept() failed with error %d", WSAGetLastError());
 			Display(temp);
 			break;
 		}
 
 		char* acceptedClientIp = inet_ntoa(client.sin_addr);
 		SocketInfo->Socket = acceptedSocket;
-		std::wstring strIP = GetWC(acceptedClientIp);
-		wsprintf(temp, L"Socket number %d connected: IP=%s", acceptedSocket, strIP.c_str());
+		sprintf_s(temp, "Socket number %d connected: IP=%s", acceptedSocket, acceptedClientIp);
 		Display(temp);
 
 		INFO_SONG infoSong;
@@ -162,11 +161,11 @@ void AcceptFunc()
 
 LRESULT CALLBACK ServerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, SOCKET& sock)
 {
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	if (WSAGETSELECTERROR(lParam))
 	{
-		wsprintf(temp, L"Socket failed with error %d", WSAGETSELECTERROR(lParam));
+		sprintf_s(temp, "Socket failed with error %d", WSAGETSELECTERROR(lParam));
 		Display(temp);
 		//CloseServer(sock);
 		return 1;
@@ -178,12 +177,12 @@ LRESULT CALLBACK ServerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 		case FD_ACCEPT:
 			if ((sock = accept(wParam, NULL, NULL)) == INVALID_SOCKET)
 			{
-				wsprintf(temp, L"accept() failed with error %d", WSAGetLastError());
+				sprintf_s(temp, "accept() failed with error %d", WSAGetLastError());
 				Display(temp);
 				break;
 			}
 			SocketInfo->Socket = sock;
-			wsprintf(temp, L"Socket number %d connected", sock);
+			sprintf_s(temp, "Socket number %d connected", sock);
 			Display(temp);
 
 			WSAAsyncSelect(sock, hwnd, WM_SOCKET_TCP, FD_READ | FD_CLOSE);
@@ -235,7 +234,7 @@ LRESULT CALLBACK ServerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 				break;
 			break;
 		case FD_CLOSE:
-			wsprintf(temp, L"Closing socket %d\n", sock);
+			sprintf_s(temp, "Closing socket %d\n", sock);
 			Display(temp);
 			closesocket(sock);
 			break;
@@ -248,15 +247,15 @@ LRESULT CALLBACK ServerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 
 void CloseServer(SOCKET& sock)
 {
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	if (sock) {
-		wsprintf(temp, L"Closing socket %d", sock);
+		sprintf_s(temp, "Closing socket %d", sock);
 		Display(temp);
 		closesocket(sock);
 	}
 	if (tcp_listen) {
-		wsprintf(temp, L"Closing listen socket %d", tcp_listen);
+		sprintf_s(temp, "Closing listen socket %d", tcp_listen);
 		Display(temp);
 		closesocket(tcp_listen);
 	}
@@ -266,37 +265,36 @@ void CloseServer(SOCKET& sock)
 
 void recvTimeout()
 {
-	wchar_t temp[STR_SIZE] = L"";
+	char temp[STR_SIZE] = "";
 	endTime = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>(endTime - startTime).count();
 	double timeGap = (double)duration;
-	wsprintf(temp, L"Packet Size: %d bytes", SocketInfo->SentPacketSize);
+	sprintf_s(temp, "Packet Size: %d bytes", SocketInfo->SentPacketSize);
 	Display(temp);
-	wsprintf(temp, L"Sent # of Packets: %d", SocketInfo->SentNumberPackets);
+	sprintf_s(temp, "Sent # of Packets: %d", SocketInfo->SentNumberPackets);
 	Display(temp);
-	wsprintf(temp, L"Sent total data: %d bytes", SocketInfo->SentBytesTotal);
+	sprintf_s(temp, "Sent total data: %d bytes", SocketInfo->SentBytesTotal);
 	Display(temp);
-	wsprintf(temp, L"Received # of Packets: %d", SocketInfo->PacketsRECV);
+	sprintf_s(temp, "Received # of Packets: %d", SocketInfo->PacketsRECV);
 	Display(temp);
-	wsprintf(temp, L"Received total data %d bytes", SocketInfo->BytesRECV);
+	sprintf_s(temp, "Received total data %d bytes", SocketInfo->BytesRECV);
 	Display(temp);
 	if (SocketInfo->IsFile)
 	{
 		std::string recvFileName(std::string("recv_" + SocketInfo->FileName));
 		std::wstring strTemp(recvFileName.begin(), recvFileName.end());
-		wsprintf(temp, L"File Name: %s", strTemp.c_str());
+		sprintf_s(temp, "File Name: %s", strTemp.c_str());
 		Display(temp);
 		SaveFile(recvFileName, SocketInfo->vecBuffer);
 	}
 
 	char temp2[STR_SIZE];
-	sprintf(temp2, "Elapsed Time: %0.2f us. Speed: %0.2f MB/s", timeGap, duration == 0 ? 0 : (double)(SocketInfo->BytesRECV / timeGap));
+	sprintf_s(temp2, "Elapsed Time: %0.2f us. Speed: %0.2f MB/s", timeGap, duration == 0 ? 0 : (double)(SocketInfo->BytesRECV / timeGap));
 	std::string strTemp(temp2);
-	std::wstring strTemp2(strTemp.begin(), strTemp.end());
-	Display(L"*****************************************");
-	Display(strTemp2.c_str());
-	Display(L"*****************************************");
-	Display(L" ");
+	Display("*****************************************");
+	Display(strTemp.c_str());
+	Display("*****************************************");
+	Display(" ");
 
 	SocketInfo->DataBuf.len = BUF_SIZE;
 }
@@ -308,7 +306,7 @@ void SaveFile(const std::string &fileName, std::vector<std::string> &data)
 	file = fopen(fileName.c_str(), "wb");
 	if (file == NULL)
 	{
-		Display(L"Failed : Open File");
+		Display("Failed : Open File");
 		return;
 	}
 
@@ -323,7 +321,7 @@ bool RecvTCP(LPSOCKET_INFORMATION SocketInfo)
 	char buffer[BUF_SIZE];
 	DWORD RecvBytes;
 	DWORD Flags;
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	SocketInfo->DataBuf.buf = buffer;
 
@@ -332,7 +330,7 @@ bool RecvTCP(LPSOCKET_INFORMATION SocketInfo)
 	{
 		if (WSAGetLastError() != WSAEWOULDBLOCK)
 		{
-			wsprintf(temp, L"WSARecv() failed with error %d\n", WSAGetLastError());
+			sprintf_s(temp, "WSARecv() failed with error %d\n", WSAGetLastError());
 			Display(temp);
 			return false;
 		}
@@ -360,7 +358,7 @@ bool RecvTCP(LPSOCKET_INFORMATION SocketInfo)
 
 void DecodeHeader(char* header, LPSOCKET_INFORMATION SocketInfo)
 {
-	Display(L"****************************** Start Receiving *******************************");
+	Display("****************************** Start Receiving *******************************");
 	startTime = high_resolution_clock::now();
 	std::string strHeader(header);
 	std::vector<std::string> params;
@@ -392,7 +390,7 @@ void DecodeHeader(char* header, LPSOCKET_INFORMATION SocketInfo)
 
 bool sendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 {
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	ZeroMemory(&SocketInfo->Overlapped, sizeof(WSAOVERLAPPED));
 	SocketInfo->Overlapped.hEvent = WSACreateEvent();
@@ -402,14 +400,14 @@ bool sendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 	{
 		if (WSAGetLastError() != ERROR_IO_PENDING)
 		{
-			wsprintf(temp, L"TCPControlWorker::SendToClient() WSASend() failed with: ", WSAGetLastError());
+			sprintf_s(temp, "TCPControlWorker::SendToClient() WSASend() failed with: %d", WSAGetLastError());
 			Display(temp);
 			return false;
 		}
 
 		if (WSAWaitForMultipleEvents(1, &SocketInfo->Overlapped.hEvent, FALSE, INFINITE, FALSE) == WAIT_TIMEOUT)
 		{
-			wsprintf(temp, L"TCPControlWorker::SendToClient timed out");
+			sprintf_s(temp, "TCPControlWorker::SendToClient timed out");
 			Display(temp);
 			return false;
 		}
@@ -419,24 +417,24 @@ bool sendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 	if (!WSAGetOverlappedResult(SocketInfo->Socket, &(SocketInfo->Overlapped),
 		&SocketInfo->BytesSEND, FALSE, &flags))
 	{
-		wsprintf(temp,  L"TCPControlWorker::SendToClient overlappedresult error", WSAGetLastError());
+		sprintf_s(temp, "TCPControlWorker::SendToClient overlappedresult error %d", WSAGetLastError());
 		return false;
 	}
 
-	wsprintf(temp, L"Sent %d bytes", SocketInfo->BytesSEND);
+	sprintf_s(temp, "Sent %d bytes", SocketInfo->BytesSEND);
 	Display(temp);
 
 	return true;
 
 	/*
 	DWORD SendBytes;
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	if (WSASend(SocketInfo->Socket, &(SocketInfo->DataBuf), 1, &SendBytes, 0, NULL, NULL) == SOCKET_ERROR)
 	{
 		if (WSAGetLastError() != WSAEWOULDBLOCK)
 		{
-			wsprintf(temp, L"WSASend() failed with error %d", WSAGetLastError());
+			sprintf_s(temp, "WSASend() failed with error %d", WSAGetLastError());
 			Display(temp);
 			closesocket(clientSock);
 			return FALSE;
@@ -445,7 +443,7 @@ bool sendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 	else
 	{
 		SocketInfo->BytesSEND += SendBytes;
-		wsprintf(temp, L"Sent %d bytes", SendBytes);
+		sprintf_s(temp, "Sent %d bytes", SendBytes);
 		Display(temp);
 		return TRUE;
 	}

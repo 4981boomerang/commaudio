@@ -8,6 +8,8 @@
 
 #include "SocketWrappers.h"
 
+#pragma warning(disable: 4996)
+
 //** initialize WSA DLL Wrapper --- Feb 3rd
 bool initializeWSA(void)
 {

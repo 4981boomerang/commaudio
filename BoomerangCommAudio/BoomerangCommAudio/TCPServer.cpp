@@ -10,14 +10,14 @@
 
 void TCPServer::RunServer(SOCKET& serverSock)
 {
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	InitializeCriticalSection(&CriticalSection);
 
 	if ((SocketInfo = (LPSOCKET_INFORMATION)GlobalAlloc(GPTR,
 		sizeof(SOCKET_INFORMATION))) == NULL)
 	{
-		wsprintf(temp, L"GlobalAlloc() failed with error %d", GetLastError());
+		sprintf_s(temp, "GlobalAlloc() failed with error %d", GetLastError());
 		Display(temp);
 		return;
 	}
@@ -46,20 +46,20 @@ void TCPServer::RunServer(SOCKET& serverSock)
 
 	if (listen(tcp_listen, MAX_NUM_CLIENT) == SOCKET_ERROR)
 	{
-		wsprintf(temp, L"listen() failed with error %d", WSAGetLastError());
+		sprintf_s(temp, "listen() failed with error %d", WSAGetLastError());
 		Display(temp);
 		return;
 	}
 
 	if ((EventArray[0] = WSACreateEvent()) == WSA_INVALID_EVENT)
 	{
-		wsprintf(temp, L"WSACreateEvent() failed with error %d", WSAGetLastError());
+		sprintf_s(temp, "WSACreateEvent() failed with error %d", WSAGetLastError());
 		Display(temp);
 		return;
 	}
 	AcceptEvent = EventArray[0];
 
-	wsprintf(temp, L"Listen TCP port %d", g_port);
+	sprintf_s(temp, "Listen TCP port %d", g_port);
 	Display(temp);
 
 	std::thread threadAccept(&TCPServer::AcceptFunc, this);
@@ -73,7 +73,7 @@ void TCPServer::AcceptFunc()
 {
 	int client_len;
 	struct	sockaddr_in client;
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	EventTotal = 1;
 	while (true)
@@ -82,15 +82,14 @@ void TCPServer::AcceptFunc()
 		SOCKET acceptedSocket;
 		if ((acceptedSocket = accept(tcp_listen, (struct sockaddr *)&client, &client_len)) == INVALID_SOCKET)
 		{
-			wsprintf(temp, L"accept() failed with error %d", WSAGetLastError());
+			sprintf_s(temp, "accept() failed with error %d", WSAGetLastError());
 			Display(temp);
 			break;
 		}
 
 		char* acceptedClientIp = inet_ntoa(client.sin_addr);
 		SocketInfo->Socket = acceptedSocket;
-		std::wstring strIP = GetWC(acceptedClientIp);
-		wsprintf(temp, L"Socket number %d connected: IP=%s", acceptedSocket, strIP.c_str());
+		sprintf_s(temp, "Socket number %d connected: IP=%s", acceptedSocket, acceptedClientIp);
 		Display(temp);
 
 		SendInitialInfo(acceptedSocket, SocketInfo);
@@ -108,7 +107,7 @@ void TCPServer::AcceptFunc()
 		if ((SocketArray[EventTotal] = (LPSOCKET_INFORMATION)GlobalAlloc(GPTR,
 			sizeof(SOCKET_INFORMATION))) == NULL)
 		{
-			wsprintf(temp, L"GlobalAlloc() failed with error %d\n", GetLastError());
+			sprintf_s(temp, "GlobalAlloc() failed with error %d\n", GetLastError());
 			Display(temp);
 			return;
 		}
@@ -124,7 +123,7 @@ void TCPServer::AcceptFunc()
 		if ((SocketArray[EventTotal]->Overlapped.hEvent = EventArray[EventTotal] =
 			WSACreateEvent()) == WSA_INVALID_EVENT)
 		{
-			wsprintf(temp, L"WSACreateEvent() failed with error %d", WSAGetLastError());
+			sprintf_s(temp, "WSACreateEvent() failed with error %d", WSAGetLastError());
 			Display(temp);
 			return;
 		}
@@ -133,11 +132,11 @@ void TCPServer::AcceptFunc()
 		DWORD RecvBytes;
 		if (WSARecv(SocketArray[EventTotal]->Socket,
 			&(SocketArray[EventTotal]->DataBuf), 1, &RecvBytes, &Flags,
-			&(SocketArray[EventTotal]->Overlapped), NULL) == SOCKET_ERROR)
+			&(SocketArray[EventTotal]->Overlapped), WorkerRoutine) == SOCKET_ERROR)
 		{
 			if (WSAGetLastError() != ERROR_IO_PENDING)
 			{
-				wsprintf(temp, L"WSARecv() failed with error %d", WSAGetLastError());
+				sprintf_s(temp, "WSARecv() failed with error %d", WSAGetLastError());
 				Display(temp);
 				return;
 			}
@@ -153,7 +152,7 @@ void TCPServer::AcceptFunc()
 		//
 		if (WSASetEvent(AcceptEvent) == FALSE)
 		{
-			wsprintf(temp, L"WSASetEvent failed with error %d", WSAGetLastError());
+			sprintf_s(temp, "WSASetEvent failed with error %d", WSAGetLastError());
 			Display(temp);
 			return;
 		}
@@ -192,7 +191,7 @@ void TCPServer::WorkThread()
 	DWORD Index;
 	DWORD RecvBytes;
 
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	// Save the accept event in the event array.
 
@@ -206,7 +205,7 @@ void TCPServer::WorkThread()
 
 		//	if (Index == WSA_WAIT_FAILED)
 		//	{
-		//		wsprintf(temp, L"WSAWaitForMultipleEvents failed with error %d", WSAGetLastError());
+		//		sprintf_s(temp, "WSAWaitForMultipleEvents failed with error %d", WSAGetLastError());
 		//		return;
 		//	}
 
@@ -220,7 +219,7 @@ void TCPServer::WorkThread()
 		if ((Index = WSAWaitForMultipleEvents(EventTotal, EventArray, FALSE,
 			WSA_INFINITE, FALSE)) == WSA_WAIT_FAILED)
 		{
-			wsprintf(temp, L"WSAWaitForMultipleEvents failed %d", WSAGetLastError());
+			sprintf_s(temp, "WSAWaitForMultipleEvents failed %d", WSAGetLastError());
 			return;
 		}
 
@@ -241,7 +240,7 @@ void TCPServer::WorkThread()
 		if ((SocketInfo = (LPSOCKET_INFORMATION)GlobalAlloc(GPTR,
 			sizeof(SOCKET_INFORMATION))) == NULL)
 		{
-			wsprintf(temp, L"GlobalAlloc() failed with error %d", GetLastError());
+			sprintf_s(temp, "GlobalAlloc() failed with error %d", GetLastError());
 			Display(temp);
 			return;
 		}
@@ -252,13 +251,13 @@ void TCPServer::WorkThread()
 		{
 			if (WSAGetLastError() != WSA_IO_PENDING)
 			{
-				wsprintf(temp, L"WSARecv() failed with error %d\n", WSAGetLastError());
+				sprintf_s(temp, "WSARecv() failed with error %d\n", WSAGetLastError());
 				Display(temp);
 				return;
 			}
 		}
 
-		wsprintf(temp, L"Recv from %d\n", SI->Socket);
+		sprintf_s(temp, "Recv from %d\n", SI->Socket);
 		Display(temp);
 	}
 
@@ -267,7 +266,7 @@ void TCPServer::WorkThread()
 
 bool TCPServer::SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 {
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	ZeroMemory(&SocketInfo->Overlapped, sizeof(WSAOVERLAPPED));
 	SocketInfo->Overlapped.hEvent = WSACreateEvent();
@@ -277,14 +276,14 @@ bool TCPServer::SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 	{
 		if (WSAGetLastError() != ERROR_IO_PENDING)
 		{
-			wsprintf(temp, L"TCPControlWorker::SendToClient() WSASend() failed with: ", WSAGetLastError());
+			sprintf_s(temp, "TCPControlWorker::SendToClient() WSASend() failed with: %d", WSAGetLastError());
 			Display(temp);
 			return false;
 		}
 
 		if (WSAWaitForMultipleEvents(1, &SocketInfo->Overlapped.hEvent, FALSE, INFINITE, FALSE) == WAIT_TIMEOUT)
 		{
-			wsprintf(temp, L"TCPControlWorker::SendToClient timed out");
+			sprintf_s(temp, "TCPControlWorker::SendToClient timed out");
 			Display(temp);
 			return false;
 		}
@@ -294,11 +293,11 @@ bool TCPServer::SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 	if (!WSAGetOverlappedResult(SocketInfo->Socket, &(SocketInfo->Overlapped),
 		&SocketInfo->BytesSEND, FALSE, &flags))
 	{
-		wsprintf(temp, L"TCPControlWorker::SendToClient overlappedresult error", WSAGetLastError());
+		sprintf_s(temp, "TCPControlWorker::SendToClient overlappedresult error %d", WSAGetLastError());
 		return false;
 	}
 
-	wsprintf(temp, L"Sent %d bytes", SocketInfo->BytesSEND);
+	sprintf_s(temp, "Sent %d bytes", SocketInfo->BytesSEND);
 	Display(temp);
 
 	return true;
@@ -379,7 +378,7 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 		Flags = 0;
 		ZeroMemory(&(SI->Overlapped), sizeof(WSAOVERLAPPED));
 
-		SI->DataBuf.len = DATA_BUFSIZE;
+		SI->DataBuf.len = BUF_SIZE;
 		SI->DataBuf.buf = SI->Buffer;
 
 		if (WSARecv(SI->Socket, &(SI->DataBuf), 1, &RecvBytes, &Flags,
@@ -390,6 +389,25 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 				printf("WSARecv() failed with error %d\n", WSAGetLastError());
 				return;
 			}
+		}
+
+		char temp[STR_SIZE];
+		sprintf(temp, "Recv %d bytes from %d", RecvBytes, SI->Socket);
+		Display(temp);
+
+		int header;
+		memcpy(&header, SI->Buffer, sizeof(int));
+		switch (header)
+		{
+		case PH_REQ_SONG:
+			SI->IsFile = true;
+			SI->vecBuffer.clear();
+			SongData songData;
+			memcpy(reinterpret_cast<char*>(&songData), SI->Buffer, sizeof(SongData));
+			SI->FileName = std::string(songData.filename);
+			sprintf(temp, "Upload - file: %s, title: %s, artist: %s", songData.filename, songData.title, songData.artist);
+			Display(temp);
+			break;
 		}
 	}
 }

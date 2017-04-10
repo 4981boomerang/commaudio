@@ -11,11 +11,11 @@ void ConnectClient(SOCKET& clientSock)
 {
 	DWORD Ret;
 	WSADATA wsaData;
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	if ((Ret = WSAStartup(0x0202, &wsaData)) != 0)
 	{
-		wsprintf(temp, L"WSAStartup failed with error %d", Ret);
+		sprintf_s(temp, "WSAStartup failed with error %d", Ret);
 		Display(temp);
 		return;
 	}
@@ -24,7 +24,7 @@ void ConnectClient(SOCKET& clientSock)
 
 	if ((clientSock = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
 	{
-		wsprintf(temp, L"socket() failed with error %d", WSAGetLastError());
+		sprintf_s(temp, "socket() failed with error %d", WSAGetLastError());
 		Display(temp);
 		return;
 	}
@@ -36,13 +36,13 @@ void ConnectClient(SOCKET& clientSock)
 	WSAAsyncSelect(clientSock, g_hMainDlg, WM_CLIENT_TCP, FD_CONNECT | FD_WRITE | FD_CLOSE);
 
 	if ((Ret == WSAConnect(clientSock, (struct sockaddr *)&InternetAddr, sizeof(InternetAddr), 0, 0, 0, NULL)) != 0) {
-		wsprintf(temp, L"WSAConnect() failed with error %d", WSAGetLastError());
+		sprintf_s(temp, "WSAConnect() failed with error %d", WSAGetLastError());
 		Display(temp);
 		return;
 	}
 	std::string strTemp(g_IP);
 	std::wstring strTemp2(strTemp.begin(), strTemp.end());
-	wsprintf(temp, L"Connecting to TCP server. IP: %s, Port: %d", strTemp2.c_str(), g_port);
+	sprintf_s(temp, "Connecting to TCP server. IP: %s, Port: %d", strTemp2.c_str(), g_port);
 	Display(temp);
 	PostMessage(g_hMainDlg, WM_CONNECT_CLIENT, NULL, NULL);
 }
@@ -51,12 +51,12 @@ void SendPacket(SOCKET& clientSock)
 {
 	LPSOCKET_INFORMATION SocketInfo;
 	char *header;
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	if ((SocketInfo = (LPSOCKET_INFORMATION)GlobalAlloc(GPTR,
 		sizeof(SOCKET_INFORMATION))) == NULL)
 	{
-		wsprintf(temp, L"GlobalAlloc() failed with error %d\n", GetLastError());
+		sprintf_s(temp, "GlobalAlloc() failed with error %d\n", GetLastError());
 		Display(temp);
 		return;
 	}
@@ -69,8 +69,8 @@ void SendPacket(SOCKET& clientSock)
 	char* packet = (char*)malloc(sizeof(char)*g_packetSize);
 	DummyPacket(packet);
 
-	Display(L"");
-	Display(L"------------------------- Start Sending -------------------------");
+	Display("");
+	Display("------------------------- Start Sending -------------------------");
 
 	if (!sendTCP(SocketInfo, clientSock))
 		return;
@@ -84,11 +84,11 @@ void SendPacket(SOCKET& clientSock)
 			break;
 	}
 
-	Display(L"*****************************************");
-	wsprintf(temp, L"Total Sent Data: %d bytes\n", SocketInfo->BytesSEND);
+	Display("*****************************************");
+	sprintf_s(temp, "Total Sent Data: %d bytes\n", SocketInfo->BytesSEND);
 	Display(temp);
-	Display(L"*****************************************");
-	Display(L"");
+	Display("*****************************************");
+	Display("");
 	GlobalFree(SocketInfo);
 	free(packet);
 	free(header);
@@ -96,11 +96,11 @@ void SendPacket(SOCKET& clientSock)
 
 LRESULT CALLBACK ClientProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, SOCKET& sock)
 {
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	if (WSAGETSELECTERROR(lParam))
 	{
-		wsprintf(temp, L"Socket failed with error %d", WSAGETSELECTERROR(lParam));
+		sprintf_s(temp, "Socket failed with error %d", WSAGETSELECTERROR(lParam));
 		Display(temp);
 		closeClient(sock);
 		return 1;
@@ -134,13 +134,13 @@ LRESULT CALLBACK ClientProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
 BOOL sendTCP(LPSOCKET_INFORMATION SocketInfo, SOCKET& clientSock)
 {
 	DWORD SendBytes;
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 	if (WSASend(SocketInfo->Socket, &(SocketInfo->DataBuf), 1, &SendBytes, 0, NULL, NULL) == SOCKET_ERROR)
 	{
 		if (WSAGetLastError() != WSAEWOULDBLOCK)
 		{
-			wsprintf(temp, L"WSASend() failed with error %d", WSAGetLastError());
+			sprintf_s(temp, "WSASend() failed with error %d", WSAGetLastError());
 			Display(temp);
 			closeClient(clientSock);
 			return FALSE;
@@ -149,7 +149,7 @@ BOOL sendTCP(LPSOCKET_INFORMATION SocketInfo, SOCKET& clientSock)
 	else
 	{
 		SocketInfo->BytesSEND += SendBytes;
-		wsprintf(temp, L"Sent %d bytes", SendBytes);
+		sprintf_s(temp, "Sent %d bytes", SendBytes);
 		Display(temp);
 		return TRUE;
 	}
@@ -166,8 +166,8 @@ char* getHeader(int packetSize, int numPacket, int totalSize, int isFile, std::s
 
 void closeClient(SOCKET& clientSock)
 {
-	wchar_t temp[STR_SIZE];
-	wsprintf(temp, L"Closing socket %d\n", clientSock);
+	char temp[STR_SIZE];
+	sprintf_s(temp, "Closing socket %d\n", clientSock);
 	Display(temp);
 	closesocket(clientSock);
 	PostMessage(g_hMainDlg, WM_DISCONNECT_CLIENT, NULL, NULL);
@@ -192,7 +192,7 @@ void sendFile(SOCKET& clientSocket)
 	DWORD fileSize;
 	DWORD numPackets;
 	std::string fileName(g_filename);
-	wchar_t temp[STR_SIZE];
+	char temp[STR_SIZE];
 
 
 	packet = (char*)malloc(sizeof(char)*g_packetSize);
@@ -200,7 +200,7 @@ void sendFile(SOCKET& clientSocket)
 	if ((SocketInfo = (LPSOCKET_INFORMATION)GlobalAlloc(GPTR,
 		sizeof(SOCKET_INFORMATION))) == NULL)
 	{
-		wsprintf(temp, L"GlobalAlloc() failed with error %d\n", GetLastError());
+		sprintf_s(temp, "GlobalAlloc() failed with error %d\n", GetLastError());
 		Display(temp);
 		return;
 	}
@@ -209,7 +209,7 @@ void sendFile(SOCKET& clientSocket)
 	file = fopen(g_filename, "rb+");
 	if (file == NULL)
 	{
-		Display(L"Failed : Open File");
+		Display("Failed : Open File");
 		return;
 	}
 	fseek(file, 0, SEEK_END);
@@ -223,8 +223,8 @@ void sendFile(SOCKET& clientSocket)
 	SocketInfo->DataBuf.buf = header;
 	SocketInfo->DataBuf.len = strlen(header) + 1;
 
-	Display(L"");
-	Display(L"-------------------------- Start Sending --------------------------");
+	Display("");
+	Display("-------------------------- Start Sending --------------------------");
 
 	if (!sendTCP(SocketInfo, clientSocket))
 		return;
@@ -242,11 +242,11 @@ void sendFile(SOCKET& clientSocket)
 			return;
 	}
 
-	Display(L"*****************************************");
-	wsprintf(temp, L"Total Sent Data: %d bytes\n", SocketInfo->BytesSEND);
+	Display("*****************************************");
+	sprintf_s(temp, "Total Sent Data: %d bytes\n", SocketInfo->BytesSEND);
 	Display(temp);
-	Display(L"*****************************************");
-	Display(L"");
+	Display("*****************************************");
+	Display("");
 	free(packet);
 	free(header);
 	fclose(file);
