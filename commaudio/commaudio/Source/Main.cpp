@@ -107,8 +107,8 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				networkManager.setPort(port);
 				networkManager.clientStart();
 
-				networkManager.startTCP(); //need to put in a background thread
-				networkManager.startUDP(); //need to put in a background thread
+				networkManager.startTCPthread(); 
+				networkManager.startUDPthread(); 
 			}
 
 			break;

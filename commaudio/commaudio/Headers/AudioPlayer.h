@@ -1,5 +1,10 @@
+#pragma comment(lib, "libzplay.lib")
+
+#define WIN32_LEAN_AND_MEAN
+
 #ifndef AUDIOPLAYER_H
 #define AUDIOPLAYER_H
+
 
 #include "libzplay.h"
 #include "UI.h"
