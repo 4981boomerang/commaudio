@@ -24,6 +24,9 @@ Network::Network(UI * uiOrig) : serverAddr{ 0 }, wsadata{ 0 }, sendBufTCP{ 0 }, 
 	//initialize overlapped structures
 	memset(&tcpOL, 0, sizeof(WSAOVERLAPPED));
 	memset(&udpOL, 0, sizeof(WSAOVERLAPPED));
+	
+	help.ol = &udpOL;
+	help.thisPtr = this;
 }
 
 /*---------------------------------------------------------------------------------
@@ -104,12 +107,57 @@ void Network::clientStop(bool stopTCP, bool stopUDP) {
 		udpRunning = FALSE;
 }
 
-//called after every successful read
-//TODO: Get the callback to be called nicely in the class
-void CALLBACK compRoutine(DWORD error, DWORD transferred, LPWSAOVERLAPPED ol, DWORD flags) {
-#if 0
-	int retVal;
+/*--------------------------------------------------------------------------
+-- FUNCTION: completionRoutine
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS: 
+-- Version 1.0 - [EY] - 2016/APR/09 - Created Function 
+--
+-- DESIGNER: Eva Yu
+--
+-- PROGRAMMER: Eva Yu
+--
+-- INTERFACE: void completionRoutine (DWORD error, DWORD transferred, LPWSAOVERLAPPED ol, DWORD flags)
+-- DWORD error -- the error value
+-- DWORD transferred -- number of bytes transderref
+-- DWORD flags -- flags assocated with wsarecv
+--
+-- NOTES:
+-- static function to help direct to class function
+--------------------------------------------------------------------------*/
+void Network::completionRoutine(DWORD error, DWORD transferred, LPWSAOVERLAPPED ol, DWORD flags)
+{
+	reinterpret_cast<Helper *>(&ol)->thisPtr->callbackRoutine(error, transferred, flags);
+}
 
+/*--------------------------------------------------------------------------
+-- FUNCTION: callbackRoutine
+--
+-- DATE: APR. 09, 2017
+--
+-- REVISIONS: 
+-- Version 1.0 - [MG] - 2016/APR/09 - DESCRIPTION 
+-- Version 1.0 - [EY] - 2016/APR/09 - Made it class function 
+--
+-- DESIGNER: Mike Goll
+--
+-- PROGRAMMER: Mike Goll
+--
+-- INTERFACE: returntype callbackRoutine (DWORD error, DWORD transferred, DWORD flags)
+-- DWORD error -- the error value
+-- DWORD transferred -- number of bytes transderref
+-- DWORD flags -- flags assocated with wsarecv
+--
+-- NOTES:
+-- callback function for handling the wsarecv
+--------------------------------------------------------------------------*/
+void Network::callbackRoutine(DWORD error, DWORD transferred, DWORD flags)
+{
+	int retVal;
+	DWORD bRecv;
+	
 	switch (error) {
 		//no error here
 	case 0:
@@ -119,12 +167,12 @@ void CALLBACK compRoutine(DWORD error, DWORD transferred, LPWSAOVERLAPPED ol, DW
 		memset(rcvBufUDP.buf, 0, sizeof(rcvBufUDP.buf));
 
 		//register again
-		if ((retVal = WSARecvFrom(udpSocket, &rcvBufUDP, 1, &recv, &flags, 0, 0, &udpOL, compRoutine)) == SOCKET_ERROR) {
+		if ((retVal = WSARecvFrom(udpSocket, &rcvBufUDP, 1, &bRecv, &flags, 0, 0, help.ol, completionRoutine)) == SOCKET_ERROR) {
 			retVal = WSAGetLastError();
 
 			if (retVal != WSA_IO_PENDING) {
-				closesocket(sockets[1]);
-				ClientStop(FALSE, TRUE);
+				closesocket(tcpSocket);
+				clientStop(FALSE, TRUE);
 				return;
 			}
 		}
@@ -140,7 +188,6 @@ void CALLBACK compRoutine(DWORD error, DWORD transferred, LPWSAOVERLAPPED ol, DW
 		clientStop(FALSE, TRUE);
 		break;
 	}
-#endif
 }
 
 /*---------------------------------------------------------------------------------
@@ -221,7 +268,7 @@ void Network::startUDP() {
 	fillServerInfo(1);
 
 	//register comp routine
-	if ((retVal = WSARecvFrom(udpSocket, &rcvBufUDP, 1, &recv, &flags, 0, 0, &udpOL, compRoutine)) == SOCKET_ERROR) {
+	if ( (retVal = WSARecvFrom(udpSocket, &rcvBufUDP, 1, &recv, &flags, 0, 0, &udpOL, completionRoutine) ) == SOCKET_ERROR) {
 		retVal = WSAGetLastError();
 
 		if (retVal != WSA_IO_PENDING) {
