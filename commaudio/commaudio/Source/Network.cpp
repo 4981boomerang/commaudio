@@ -138,7 +138,7 @@ void Network::completionRoutine(DWORD error, DWORD transferred, LPWSAOVERLAPPED 
 -- DATE: APR. 09, 2017
 --
 -- REVISIONS: 
--- Version 1.0 - [MG] - 2016/APR/09 - DESCRIPTION 
+-- Version 1.0 - [MG] - 2016/APR/09 - DESCRIPTION
 -- Version 1.0 - [EY] - 2016/APR/09 - Made it class function 
 --
 -- DESIGNER: Mike Goll
@@ -161,6 +161,7 @@ void Network::callbackRoutine(DWORD error, DWORD transferred, DWORD flags)
 	switch (error) {
 		//no error here
 	case 0:
+		//push data received into the circular buffer
 		AudioPlayer::instance().getBuf().push_back(rcvBufUDP.buf);
 
 		//empty the receiving buffer
@@ -171,7 +172,7 @@ void Network::callbackRoutine(DWORD error, DWORD transferred, DWORD flags)
 			retVal = WSAGetLastError();
 
 			if (retVal != WSA_IO_PENDING) {
-				closesocket(tcpSocket);
+				closesocket(udpSocket);
 				clientStop(FALSE, TRUE);
 				return;
 			}
@@ -254,6 +255,10 @@ void Network::startUDP() {
 	int retVal;
 	DWORD flags = MSG_PARTIAL, recv;
 
+	memset(&mreq, 0, sizeof(mreq));
+	mreq.imr_multiaddr.s_addr = inet_addr(MCAST_IP);
+	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+
 	//dns query, an IP address would return itself
 	if (!(hp = gethostbyname(dest))) {
 		WSACleanup();
@@ -268,7 +273,7 @@ void Network::startUDP() {
 	fillServerInfo(1);
 
 	//register comp routine
-	if ( (retVal = WSARecvFrom(udpSocket, &rcvBufUDP, 1, &recv, &flags, 0, 0, &udpOL, completionRoutine) ) == SOCKET_ERROR) {
+	if ((retVal = WSARecvFrom(udpSocket, &rcvBufUDP, 1, &recv, &flags, 0, 0, &udpOL, completionRoutine) ) == SOCKET_ERROR) {
 		retVal = WSAGetLastError();
 
 		if (retVal != WSA_IO_PENDING) {
@@ -279,6 +284,9 @@ void Network::startUDP() {
 			return;
 		}
 	}
+
+	//register for the multicast group
+	addToMultiCast(udpSocket, mreq);
 
 	//continuously listen for datagrams
 	//SleepEx will set the thread in an alertable state in which Windows
@@ -333,7 +341,6 @@ bool Network::createSocket(int connectionType) {
 	return TRUE;
 }
 
-//changes depending on the type of connection
 /*---------------------------------------------------------------------------------
 -- FUNCTION:	  fillServerInfo
 --
@@ -549,19 +556,23 @@ bool Network::uploadFile() {
 }
 
 /*---------------------------------------------------------------------------------
---  FUNCTION:	   requestSong
+-- FUNCTION:	 requestSong
 --
---  DATE:		   April 3, 2017
+-- DATE:		 April 3, 2017
 --
---  DESIGNER:	   Aing Ragunathan
+-- DESIGNER:	 Aing Ragunathan
 --
---  INTERFACE:     int song - SID of the song requested
+-- DEVELOPER:    Aign Ragunathan
 --
---  RETURNS:	   none
+-- INTERFACE:    bool Network::requestSong(int song)
 --
---  REVISIONS:     Integrated with the client UI | Michael Goll | April 7, 2017
+-- PARAMETER:    int song - SID of the song requested
 --
---  NOTES:         Sends a song request to the server.
+-- RETURNS:	     bool - Whether or not the request was successful.
+--
+-- REVISIONS:    Integrated with the client UI | Michael Goll | April 7, 2017
+--
+-- NOTES:        Sends a song request to the server.
 -----------------------------------------------------------------------------------*/
 bool Network::requestSong(int song) {
 	ControlMessage *controlMessage;
@@ -578,4 +589,52 @@ bool Network::requestSong(int song) {
 		return false;
 
 	return true;
+}
+
+/*---------------------------------------------------------------------------------
+-- FUNCTION:	  addToMultiCast
+--
+-- DATE:		  April 3, 2017
+--
+-- DESIGNER:	  Eva Yu
+--
+-- DEVELOPER:     Michael Goll
+--
+-- INTERFACE:     void Network::removeFromMultiCast(SOCKET& s, ip_mreq& mreq)
+--
+-- RETURNS:	      none
+--
+-- REVISIONS:     
+--
+-- NOTES:         Adds the client to the multicast group on the server.
+-----------------------------------------------------------------------------------*/
+void Network::addToMultiCast(SOCKET& s, ip_mreq& mreq) {
+	int retVal;
+	if ((retVal = setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&mreq, sizeof(mreq)) == -1)) {
+		ui->showMessageBox("Cannot join multicast group.", "Socket Option Error - SockOption Join", MB_OK | MB_ICONERROR);
+	}
+}
+
+/*---------------------------------------------------------------------------------
+-- FUNCTION:	  removeFromMultiCast
+--
+-- DATE:		  April 3, 2017
+--
+-- DESIGNER:	  Eva Yu
+--
+-- DEVELOPER:     Michael Goll
+--
+-- INTERFACE:     void Network::removeFromMultiCast(SOCKET& s, ip_mreq& mreq)
+--
+-- RETURNS:	      none
+--
+-- REVISIONS:
+--
+-- NOTES:         Adds the client to the multicast group on the server.
+-----------------------------------------------------------------------------------*/
+void Network::removeFromMultiCast(SOCKET& s, ip_mreq& mreq) {
+	int retVal;
+	if ((retVal = setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char*)&mreq, sizeof(mreq)) == -1)) {
+		ui->showMessageBox("Cannot leave multicast group.", "Socket Option Error - SockOption Leave", MB_OK | MB_ICONERROR);
+	}
 }

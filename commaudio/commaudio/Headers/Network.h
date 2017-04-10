@@ -5,6 +5,7 @@
 #define _WINSOCKAPI_
 //Windows Headers
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #include <Windows.h>
 
 //C/C++ Headers
@@ -30,6 +31,8 @@ constexpr int UDP_PORT = 5001;
 #define SONG_UPDATE		1
 #define CLIENT_UPDATE	2
 #define SONG_REQUEST	3
+
+#define MCAST_IP "235.0.0.1"
 
 typedef struct {
 	int header;
@@ -78,6 +81,10 @@ public:
 	bool uploadFile();
 
 	void callbackRoutine(DWORD error, DWORD transferred, DWORD flags);
+
+	//Multicast Functions
+	void addToMultiCast(SOCKET&, ip_mreq&);
+	void removeFromMultiCast(SOCKET&, ip_mreq&);
 
 
 	/*--------------------------------------------------------------------------
@@ -156,6 +163,7 @@ private:
 	std::string ip;
 	int port;
 	UI * ui;
+	ip_mreq mreq;
 	
 	struct Helper {
 		WSAOVERLAPPED * ol;

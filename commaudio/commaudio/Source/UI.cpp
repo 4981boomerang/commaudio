@@ -341,4 +341,22 @@ void UI::changeAlbumPicture() {
 
 }
 
+void UI::addSingleListItem() {
+	HWND listGroup = GetDlgItem(hDlg, IDC_SONGLIST);
+
+	LVITEM lvItem;
+
+	lvItem.pszText = LPSTR_TEXTCALLBACK;
+	lvItem.mask = LVIF_TEXT | LVIF_STATE | LVIF_IMAGE;
+	lvItem.stateMask = 0;
+	lvItem.iSubItem = 0;
+	lvItem.state = 0;
+	lvItem.iItem = itemIndex;
+	lvItem.iImage = itemIndex++;
+
+	if (ListView_InsertItem(listGroup, &lvItem) == -1) {
+		showMessageBox("Error inserting item", "Insertion Error", MB_OK | MB_ICONERROR);
+	}
+}
+
 

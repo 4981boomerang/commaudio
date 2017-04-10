@@ -43,7 +43,7 @@
 class UI {
 public:
 
-	UI(HWND hwnd) : hDlg(hwnd) {}
+	UI(HWND hwnd) : hDlg(hwnd), itemIndex(0) {}
 	~UI() = default;
 
 	/* ----------------------------------------------------------------------------
@@ -274,8 +274,11 @@ public:
 
 	void changeAlbumPicture();
 
+	void addSingleListItem();
+
 	private:
 		HWND hDlg;
+		int itemIndex;
 };
 
 

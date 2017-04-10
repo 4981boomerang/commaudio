@@ -61,6 +61,9 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	HDC hdc = (HDC)wParam;
 	UI ui(hDlg);
 	Network networkManager(&ui);
+	LVITEM lvI;
+	LVTILEVIEWINFO tvi = { 0 };
+	HWND songList = GetDlgItem(hDlg, IDC_SONGLIST);
 
 	//connection thread
 	HANDLE bgTCPThread = NULL, bgUDPThread = NULL;
@@ -68,6 +71,30 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg)
 	{
 	case WM_INITDIALOG:
+		SendMessage(songList, LVM_SETVIEW, (WPARAM)LV_VIEW_TILE, 0);
+
+		tvi.cbSize = sizeof(LVTILEVIEWINFO);
+		tvi.dwMask = LVTVIM_COLUMNS;
+		tvi.cLines = 2; // 2 subitems
+		SendMessage(songList, LVM_SETTILEINFO, 0, (LPARAM)&tvi);
+
+		char temp[256];
+
+		memset(&lvI, 0, sizeof(lvI));
+
+		for (int i = 0; i < 5; ++i) {
+			lvI.mask = LVIF_TEXT | LVIF_IMAGE; //text style
+			lvI.cchTextMax = 256; //max size of temp
+			lvI.iItem = i; //choose which item
+			lvI.iSubItem = 0; //put in first column
+			lvI.pszText = "ITEM 0"; //display text
+			SendMessage(songList, LVM_INSERTITEM, 0, (LPARAM)&lvI); //send this info to the list control
+
+			lvI.iSubItem = i;
+			lvI.pszText = "[TEMPLATE SONG LIST ENTRY]";
+			SendMessage(songList, LVM_SETITEM, 0, (LPARAM)&lvI);
+		}
+		
 		//temp UI stuff for now
 		ui.setText(IDC_TRACKNAME, "Placeholder Song Title");
 		ui.setText(IDC_ARTIST, "Placeholder Artist Title");
@@ -85,7 +112,7 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case IDM_HELP:
-			ui.showMessageBox("[PLACEHOLDER]", "Com Audio Help", MB_OK | MB_ICONINFORMATION);
+			ui.showMessageBox("Enter an IP address into the \"IP Address\" box and the port number and click \"Connect.\"", "Com Audio Help", MB_OK | MB_ICONINFORMATION);
 			break;
 
 		case IDM_ABOUT:
@@ -139,6 +166,7 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case IDC_NEXT:
+			ui.addSingleListItem();
 			break;
 
 		case IDC_PREV:
