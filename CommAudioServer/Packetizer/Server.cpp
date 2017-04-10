@@ -253,7 +253,7 @@ void Server::streamSendLoop()
 	
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	inet_pton(AF_INET, TEMP_IP/*MCAST_IP*/, &(addr.sin_addr.s_addr));
+	inet_pton(AF_INET, MCAST_IP, &(addr.sin_addr.s_addr));
 	addr.sin_port = htons(PORTNO);
 	
 	while (isStreaming)
@@ -274,7 +274,6 @@ void Server::streamSendLoop()
 				// reset due time to regulkar mp3 rates
 				timer.cancelTimer();
 				timer.setTimer(regularLoadInterval);
-				
 			}
 
 			timer.resetTimer();
@@ -327,7 +326,6 @@ int Server::runServer(const char * ipaddr)
 	// send client list 
 	// listen to commands
 	// if the client wants to stream a library, get index of lib  
-	int lib = 0;
 	// make a new thread to start stream
 	startStream();
 	return 0;
