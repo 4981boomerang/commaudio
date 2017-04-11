@@ -140,17 +140,21 @@ void init(ZPlay * player) {
 
 	if ((player->OpenStream(0, 1, &buffer, 21000, sfMp3)) == 0) {
 		//error occurred opening the stream
-		
+		char * error = player->GetError();
 	}
 }
 
 int __stdcall callbackFunc(void * instance, void * userData, TCallbackMessage message, unsigned int param1, unsigned int param2) {
 	ZPlay * player = (ZPlay*)instance;
-	//char buffer[PACKET_SIZE] = common.cbuff.peek();
+	char buffer[PACKET_SIZE];
+
+	//grab the next packet in the buffer
+	strcpy_s(buffer, PACKET_SIZE, common.cbuff.pop().c_str());
 
 	switch (message) {
 	case MsgStreamNeedMoreData:
-		//player->PushDataToStream(buffer, PACKET_SIZE);
+		//add the packet to the internal buffer
+		player->PushDataToStream(buffer, PACKET_SIZE);
 		break;
 
 		return 0;

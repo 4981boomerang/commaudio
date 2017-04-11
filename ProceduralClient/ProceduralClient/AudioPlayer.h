@@ -10,8 +10,11 @@
 #include "UI.h"
 #include "CBuff.h"
 #include "Main.h"
+#include "Network.h"
 
 #define BUFSIZE 1024
+
+extern commonResources common;
 	
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   createPlayer

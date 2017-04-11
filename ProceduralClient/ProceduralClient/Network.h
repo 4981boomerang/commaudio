@@ -57,7 +57,7 @@ typedef struct {
 	char artist[STR_MAX_SIZE];
 } SongData;
 
-//The global struct used by the server side
+
 typedef struct _common {
 	sockaddr_in serverAddrTCP, serverAddrUDP;
 	SOCKET tcpSocket, udpSocket;
@@ -96,5 +96,7 @@ typedef struct _common {
 
 	void startTCP(HWND hDlg);
 	void startUDP(HWND hDlg);
+
+	commonResources& getCommon();
 
 #endif

@@ -26,6 +26,7 @@
 //Custom Headers
 #include "Main.h"
 
+libZPlay::ZPlay * player = libZPlay::CreateZPlay();
 int __stdcall callbackFunc(void * instance, void * userData, libZPlay::TCallbackMessage message, unsigned int param1, unsigned int param2);
 
 /*-----------------------------------------------------------------------------------------------
@@ -55,9 +56,6 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	LVITEM lvI;
 	LVTILEVIEWINFO tvi = { 0 };
 	HWND songList = GetDlgItem(hDlg, IDC_SONGLIST);
-	libZPlay::ZPlay * player = libZPlay::CreateZPlay();
-
-	init(player);
 
 	//connection thread
 	HANDLE bgTCPThread = NULL, bgUDPThread = NULL;
@@ -137,6 +135,13 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			//disconnect here, network cleanup
 			clientStop(TRUE, TRUE);
 			WSACleanup();
+
+			if (bgTCPThread != NULL)
+				TerminateThread(bgTCPThread, 0);
+
+			if (bgUDPThread != NULL)
+				TerminateThread(bgUDPThread, 0);
+
 			swapButtons(hDlg, IDC_DISCONNECT, IDC_CONNECT);
 			SetDlgItemText(hDlg, IDC_EDIT1, "Not Connected");
 			break;
