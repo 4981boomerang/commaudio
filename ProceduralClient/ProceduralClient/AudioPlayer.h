@@ -11,6 +11,7 @@
 #include "CBuff.h"
 #include "Main.h"
 #include "Network.h"
+#include "../../BoomerangCommAudio/BoomerangCommAudio/Packetizer.h"
 
 #define BUFSIZE 1024
 	

@@ -225,7 +225,7 @@ void startUDP(HWND hDlg) {
 	}
 
 	common.serverAddrUDP.sin_family = AF_INET;
-	common.serverAddrUDP.sin_port = htons(UDP_PORT);
+	common.serverAddrUDP.sin_port = htons(5001);
 	memcpy((char *)&common.serverAddrUDP.sin_addr, common.udpHP->h_addr, common.udpHP->h_length);
 
 	if ((retVal = bind(common.udpSocket, (SOCKADDR *)&common.serverAddrUDP, sizeof(SOCKADDR_IN))) == -1) {
@@ -401,8 +401,8 @@ bool tcpConnect() {
 --				   or initiates downloading a file from the server.
 -----------------------------------------------------------------------------------*/
 bool tcpRecv() {
-	ControlMessage *controlMessage;
-	ClientData *clientData;
+	CONTROL_MSG *controlMessage;
+	INFO_CLIENT *clientData;
 	SongData *songData;
 
 	//Get header from server
@@ -430,23 +430,28 @@ bool tcpRecv() {
 		break;
 
 	case CLIENT_UPDATE:
-		if (recv(common.tcpSocket, common.messageBuffer + sizeof(int), sizeof(ClientData) - sizeof(int), 0) == -1) {
+		if (recv(common.tcpSocket, common.messageBuffer + sizeof(int), sizeof(INFO_CLIENT) - sizeof(int), 0) == -1) {
 			perror("recvServerMessage - Recv control message failed!");
 			return false;
 		}
-		clientData = (ClientData *)common.messageBuffer;	//extract client from buffer
+		clientData = (INFO_CLIENT *)common.messageBuffer;	//extract client from buffer
 													//clients.push_back(ClientData());	//create a new client object in the vector
-		ClientData recvClientData;
+		INFO_CLIENT recvClientData;
 		sprintf_s(recvClientData.username, STR_MAX_SIZE, "%s", clientData->username);
 		sprintf_s(recvClientData.ip, STR_MAX_SIZE, "%s", clientData->ip);
 		break;
 
-	case SONG_REQUEST:
-		//get file from server and save to disk
-		if (!downloadFile()) {
-			return false;
+	//case SONG_DOWNLOAD:
+		/*
+		while (sizeof(messageBuffer) == PACKET_SIZE) {
+			if (recv(Socket, messageBuffer, sizeof(int), 0) == -1) {
+				perror("recvServerMessage - Recv control message failed!");
+				return false;
+			}
 		}
+		
 		break;
+		*/
 	}
 
 	return true;
@@ -468,7 +473,26 @@ bool tcpRecv() {
 --  NOTES:      Receives a file from the server. Number of packets must be specified.
 -----------------------------------------------------------------------------------*/
 bool downloadFile() {
-	//differentiate file packet from command
+	char* sid = "1";
+	char filename[MAX_PATH] = TEST_FILE;
+
+	/*	GUI	*/
+	//get filename from GUI	-> char * filename
+	//get corresponding SID of filename
+
+	HANDLE fileInputHandle = CreateFile(getFileName(common.hDlg), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+
+	//send request song packet (SID)
+	SongData downloadRequest;
+	char * messageBuffer;
+
+	//prepare song request packet, NO SID
+	downloadRequest.SID = atoi(sid);
+	messageBuffer = (char *)&downloadRequest;	//make struct sendable 
+	send(common.tcpSocket, messageBuffer, strlen(messageBuffer), 0);
+
+	//update GUI	- make function 
 	return true;
 }
 
@@ -487,81 +511,59 @@ bool downloadFile() {
 --
 --  NOTES:          Sends a contol message to the server before sending a file.
 -----------------------------------------------------------------------------------*/
-bool uploadFile() {
-	HANDLE fileOutputHandle;	//Handle to the requested file to send
+bool uploadFile(HWND hDlg) {
 	TCHAR fileBuffer[PACKET_SIZE] = { 0 };	//buffer for file
 											//TCHAR filename[MAX_PATH] = "McLaren.txt";
-	TCHAR filename[MAX_PATH] = TEST_FILE;
-	OVERLAPPED ol = { 0 };
-	DWORD bytesRead;
-	std::string temp;
+											//TCHAR filename[MAX_PATH] = TEST_FILE;
+	char * filename = { getFileName(common.hDlg) };
+	long totalNumberOfPackets;
+	long lastPacketSize;
+	char title[STR_MAX_SIZE] = "";
+	char artist[STR_MAX_SIZE] = "";
+	SoundFilePacketizer packer;
 
 
-	fileOutputHandle = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	/*	GUI	*/
+	//get filename from GUI	-> char * filename
+	//get artist
+	//get title
 
-	//validate file exists and send
-	if (fileOutputHandle == INVALID_HANDLE_VALUE) {
-		//give user an error
+	SongData uploadRequest;
+	char * messageBuffer;
+	
+
+	uploadRequest.header = 6;
+	//prepare song request packet, NO SID
+	sprintf_s(uploadRequest.artist, STR_MAX_SIZE, "%s", artist);
+	sprintf_s(uploadRequest.title, STR_MAX_SIZE, "%s", title);
+
+	GetDlgItemText(hDlg, IDC_FILEPATH, filename, MAX_PATH);
+	//sprintf_s(uploadRequest.filename, FILENAME_MAX, "%s", filename);
+	strcpy_s(uploadRequest.filename, MAX_PATH, filename);
+
+	messageBuffer = (char *)&uploadRequest;	//make struct sendable 
+	send(common.tcpSocket, messageBuffer, sizeof(SongData), 0);
+
+
+	//How would I preform validation for opening file?
+	//file does not exists
+	//file failed to open
+	//can we make SoundFilePacketizer::makePacketsFromFile return bool?
+	packer.makePacketsFromFile(getFileName(common.hDlg));
+	totalNumberOfPackets = packer.getTotalPackets();
+	lastPacketSize = packer.getLastPackSize();
+
+	//send all packets except for last one
+	for (int i = 0; i < totalNumberOfPackets; i++) {
+		send(common.tcpSocket, packer.getNextPacket(), PACKET_SIZE, 0);
 	}
-	else {
-		do {
-			if (!ReadFile(fileOutputHandle, fileBuffer, PACKET_SIZE - 1, &bytesRead, &ol)) {
-				printf("Terminal failure: Unable to read from file.\n GetLastError=%08x\n", GetLastError());
-				//read from file error, notify user
-				CloseHandle(fileOutputHandle);
-				return false;
-			}
 
-			//append a null character to cut off the string if the entire buffer isn't used
-			if (strlen(fileBuffer) < 1023) {
-				fileBuffer[bytesRead] = '\0';
-			}
-
-			//send(Socket, fileBuffer, strlen(fileBuffer), 0); //send the buffer to the server		
-			send(common.tcpSocket, fileBuffer, bytesRead, 0); //send the buffer to the server		
-			ol.Offset += bytesRead;	//move the reading window 
-			temp = fileBuffer;	//reset the buffer
-			temp.resize(PACKET_SIZE);
-		} while (strlen(fileBuffer) >= PACKET_SIZE - 1);
-	}
+	//send last packet
+	send(common.tcpSocket, packer.getNextPacket(), lastPacketSize, 0);
 
 
-	return true;
-}
-
-/*---------------------------------------------------------------------------------
--- FUNCTION:	 requestSong
---
--- DATE:		 April 3, 2017
---
--- DESIGNER:	 Aing Ragunathan
---
--- DEVELOPER:    Aign Ragunathan
---
--- INTERFACE:    bool requestSong(int song)
---
--- PARAMETER:    int song - SID of the song requested
---
--- RETURNS:	     bool - Whether or not the request was successful.
---
--- REVISIONS:    Integrated with the client UI | Michael Goll | April 7, 2017
---
--- NOTES:        Sends a song request to the server.
------------------------------------------------------------------------------------*/
-bool requestSong(int song) {
-	ControlMessage *controlMessage;
-	char *messageBuffer;
-
-	//setup control message
-	controlMessage = new ControlMessage();
-	controlMessage->header = SONG_REQUEST;
-	controlMessage->SID = song;
-	messageBuffer = (char *)controlMessage;
-
-	//send message to server
-	if (send(common.tcpSocket, messageBuffer, strlen(messageBuffer), 0) == -1)
-		return false;
-
+	//update GUI	- make function 
+	
 	return true;
 }
 

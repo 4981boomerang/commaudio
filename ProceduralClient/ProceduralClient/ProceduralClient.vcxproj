@@ -110,6 +110,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\BoomerangCommAudio\BoomerangCommAudio\Packetizer.cpp" />
     <ClCompile Include="AudioPlayer.cpp" />
     <ClCompile Include="CBuff.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -117,6 +118,8 @@
     <ClCompile Include="UI.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\BoomerangCommAudio\BoomerangCommAudio\Common.h" />
+    <ClInclude Include="..\..\BoomerangCommAudio\BoomerangCommAudio\Packetizer.h" />
     <ClInclude Include="AudioPlayer.h" />
     <ClInclude Include="CBuff.h" />
     <ClInclude Include="libzplay.h" />

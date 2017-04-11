@@ -16,6 +16,8 @@
 #include "UI.h"
 #include "CBuff.h"
 #include "AudioPlayer.h"
+#include "..\..\BoomerangCommAudio\BoomerangCommAudio\Common.h"
+
 
 constexpr int TCP_PORT = 5000;
 constexpr int UDP_PORT = 5001;
@@ -31,32 +33,9 @@ constexpr int UDP_PORT = 5001;
 
 #define SONG_UPDATE		1
 #define CLIENT_UPDATE	2
-#define SONG_REQUEST	3
+#define SONG_DOWNLOAD	3
 
 #define MCAST_IP "235.0.0.1"
-
-typedef struct {
-	int header;
-	union {
-		int numOfSongs;
-		int numOfClients;
-		int SID;
-	};
-} ControlMessage;
-
-typedef struct {
-	int header;
-	char username[STR_NAME];
-	char ip[STR_NAME];
-} ClientData;
-
-typedef struct {
-	int header;
-	int SID;
-	char title[STR_MAX_SIZE];
-	char artist[STR_MAX_SIZE];
-} SongData;
-
 
 typedef struct _common {
 	HWND hDlg;
@@ -88,7 +67,7 @@ typedef struct _common {
 
 	bool requestSong(int);
 	bool downloadFile();
-	bool uploadFile();
+	bool uploadFile(HWND);
 
 	//Multicast Functions
 	void addToMultiCast(HWND, SOCKET&, ip_mreq&);
@@ -97,4 +76,5 @@ typedef struct _common {
 	void startTCP(HWND hDlg);
 	void startUDP(HWND hDlg);
 
+	//SoundFilePacketizer packer;
 #endif
