@@ -104,6 +104,8 @@ void CALLBACK completionRoutineUDP(DWORD error, DWORD transferred, LPWSAOVERLAPP
 			}
 		}
 		*/
+
+		play(common.hDlg, common.player);
 		
 		//empty the receiving buffer
 		memset(common.rcvBufUDP.buf, 0, sizeof(common.rcvBufUDP.buf));
@@ -176,6 +178,7 @@ void startTCP(HWND hDlg) {
 
 	swapButtons(hDlg, IDC_CONNECT, IDC_DISCONNECT);
 	SetDlgItemText(hDlg, IDC_EDIT1, "Connected");
+	init(common.player);
 }
 
 /*---------------------------------------------------------------------------------
