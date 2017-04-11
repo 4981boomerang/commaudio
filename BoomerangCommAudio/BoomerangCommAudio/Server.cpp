@@ -419,7 +419,7 @@ void Server::AcceptFunc()
 
 		char* acceptedClientIp = inet_ntoa(client.sin_addr);
 		SocketInfo->Socket = acceptedSocket;
-		sprintf_s(temp, STR_SIZE, "Socket number %d connected: IP=%s", acceptedSocket, acceptedClientIp);
+		sprintf_s(temp, STR_SIZE, "Socket number %d connected: IP=%s", (int)acceptedSocket, acceptedClientIp);
 		Display(temp);
 
 		SendInitialInfo(acceptedSocket, SocketInfo);
@@ -570,7 +570,7 @@ void Server::WorkThread()
 			}
 		}
 
-		sprintf_s(temp, STR_SIZE, "Recv from %d\n", SI->Socket);
+		sprintf_s(temp, STR_SIZE, "Recv from %d\n", (int)SI->Socket);
 		Display(temp);
 	}
 
@@ -696,7 +696,7 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 			//SongData* songDataTest = reinterpret_cast<SongData*>(SI->Buffer);
 			memcpy(&songData, SI->Buffer, sizeof(SongData));
 			SI->FileName = std::string(songData.filename);
-			sprintf(temp, "Upload - file: %s, title: %s, artist: %s", songData.filename, songData.title, songData.artist);
+			sprintf_s(temp, STR_SIZE, "Upload - file: %s, title: %s, artist: %s", songData.filename, songData.title, songData.artist);
 			Display(temp);
 			break;
 
@@ -712,6 +712,7 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 		case PH_END_PACKET_SONG:
 			SI->IsFile = false;
 			SaveSongFile(SI->FileName, SI->vecBuffer);
+			sprintf_s(temp, STR_SIZE, "Save a song: %s", SI->FileName.c_str());
 			break;
 		}
 

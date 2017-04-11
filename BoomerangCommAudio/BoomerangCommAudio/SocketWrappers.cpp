@@ -133,7 +133,7 @@ int connectSock(SOCKET sock, addrinfo * ai)
 
 	for (p = ai; p != NULL; p = p->ai_next)
 	{
-		if (connect(sock, p->ai_addr, p->ai_addrlen) == 0)
+		if (connect(sock, p->ai_addr, (int)p->ai_addrlen) == 0)
 			return 0;
 	}
 	std::cerr << "connect failed with error : " << WSAGetLastError() << std::endl;
