@@ -58,7 +58,6 @@ typedef struct {
 
 //The global struct used by the server side
 typedef struct _common {
-	WORD wVersionRequested;
 	sockaddr_in serverAddrTCP, serverAddrUDP;
 	SOCKET tcpSocket, udpSocket;
 	WSABUF sendBufUDP, sendBufTCP, rcvBufUDP, rcvBufTCP;
@@ -69,13 +68,13 @@ typedef struct _common {
 	bool udpRunning, tcpRunning;
 	char messageBuffer[PACKET_SIZE];
 	bool file;
-	hostent * hp;
+	hostent * hp, * udpHP;
 	ip_mreq mreq;
 } commonResources;
 
 	void CALLBACK completionRoutineUDP(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
 
-	bool clientStart();
+	bool clientStart(HWND);
 	void clientStop(bool, bool);
 
 	bool createSocket(int);
@@ -93,7 +92,7 @@ typedef struct _common {
 	void addToMultiCast(HWND, SOCKET&, ip_mreq&);
 	void removeFromMultiCast(HWND, SOCKET&, ip_mreq&);
 
-	void startTCP(HWND hDlg, char * dest, int port);
-	void startUDP(HWND hDlg, char * dest, int port);
+	void startTCP(HWND hDlg);
+	void startUDP(HWND hDlg);
 
 #endif

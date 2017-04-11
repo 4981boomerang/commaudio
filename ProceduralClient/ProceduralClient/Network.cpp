@@ -20,10 +20,12 @@ commonResources common = { 0 };
 --
 -- NOTES:         Starts WSAStartup to use network functionality.
 -----------------------------------------------------------------------------------*/
-bool clientStart() {
-	if (WSAStartup(common.wVersionRequested, &common.wsadata) != 0) {
+bool clientStart(HWND hDlg) {
+	WORD wVersionRequested = MAKEWORD(2, 2);
+	if ((WSAStartup(wVersionRequested, &common.wsadata)) == -1) {
 		//show user there is an error
-		//ui->showMessageBox("Cannot start WSAStartup", "WSAStartup Error", MB_ICONERROR);
+		showMessageBox(hDlg, "Cannot start WSAStartup", "WSAStartup Error", MB_ICONERROR);
+		int errorNo = GetLastError();
 		return FALSE;
 	}
 }
@@ -160,14 +162,17 @@ void CALLBACK completionRoutineUDP(DWORD error, DWORD transferred, LPWSAOVERLAPP
 --
 -- NOTES:         Runs through the TCP setup processes.
 -----------------------------------------------------------------------------------*/
-void startTCP(HWND hDlg, char * dest, int port) {
-
+void startTCP(HWND hDlg) {
+	hostent * hp;
 	int errorReturn;
 
 	//dns query, an IP address would return itself
-	if (!(common.hp = gethostbyname(dest))) {
+	if (!(hp = gethostbyname(getDestination(hDlg)))) {
+		errorReturn = GetLastError();
 		return;
 	}
+
+	common.hp = hp;
 
 	if (!createSocket(0)) {
 		showMessageBox(hDlg, "Cannot create TCP socket.", "TCP Socket Creation Error", MB_ICONERROR);
@@ -185,7 +190,6 @@ void startTCP(HWND hDlg, char * dest, int port) {
 	}
 
 	swapButtons(hDlg, IDC_CONNECT, IDC_DISCONNECT);
-	showMessageBox(hDlg, "GOT HERE", "", MB_OK);
 }
 
 /*---------------------------------------------------------------------------------
@@ -205,19 +209,24 @@ void startTCP(HWND hDlg, char * dest, int port) {
 --
 -- NOTES:         Runs through the UDP setup processes.
 -----------------------------------------------------------------------------------*/
-void startUDP(HWND hDlg, char * dest, int port) {
+void startUDP(HWND hDlg) {
 
 	int retVal;
 	DWORD flags = MSG_PARTIAL, recv;
+	hostent * hp;
+	common.udpRunning = TRUE;
 
 	memset(&common.mreq, 0, sizeof(common.mreq));
 	common.mreq.imr_multiaddr.s_addr = inet_addr(MCAST_IP);
 	common.mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 
 	//dns query, an IP address would return itself
-	if (!(common.hp = gethostbyname(dest))) {
+	if (!(hp = gethostbyname(getDestination(hDlg)))) {
+		retVal = GetLastError();
 		return;
 	}
+
+	common.udpHP = hp;
 
 	if (!createSocket(1)) {
 		showMessageBox(hDlg, "Cannot create UDP socket.", "UDP Socket Creation Error", MB_ICONERROR);
@@ -226,7 +235,14 @@ void startUDP(HWND hDlg, char * dest, int port) {
 
 	common.serverAddrUDP.sin_family = AF_INET;
 	common.serverAddrUDP.sin_port = htons(UDP_PORT);
-	memcpy((char *)&common.serverAddrUDP.sin_addr, common.hp->h_addr, common.hp->h_length);
+	memcpy((char *)&common.serverAddrUDP.sin_addr, common.udpHP->h_addr, common.udpHP->h_length);
+
+	if ((retVal = bind(common.udpSocket, (SOCKADDR *)&common.serverAddrUDP, sizeof(SOCKADDR_IN))) == -1) {
+		retVal = WSAGetLastError();
+		closesocket(common.udpSocket);
+		showMessageBox(hDlg, "Cannot Bind Socket, Aborting...", "Socket Bind Error", MB_OK | MB_ICONERROR);
+		return;
+	}
 
 	//register comp routine
 	if ((retVal = WSARecvFrom(common.udpSocket, &common.rcvBufUDP, 1, &recv, &flags, 0, 0, &common.udpOL, completionRoutineUDP)) == SOCKET_ERROR) {
@@ -234,7 +250,6 @@ void startUDP(HWND hDlg, char * dest, int port) {
 
 		if (retVal != WSA_IO_PENDING) {
 			//let user know that receiving failed
-			retVal = WSAGetLastError();
 			showMessageBox(hDlg, "UDP receive error.", "UDP Receiving Error", MB_ICONERROR);
 			closesocket(common.udpSocket);
 			return;
@@ -253,6 +268,8 @@ void startUDP(HWND hDlg, char * dest, int port) {
 			break;
 		}
 	}
+
+	removeFromMultiCast(hDlg, common.udpSocket, common.mreq);
 }
 
 /*---------------------------------------------------------------------------------
@@ -286,7 +303,7 @@ bool createSocket(int connectionType) {
 		break;
 
 	case 1:
-		if ((common.udpSocket = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP, 0, 0, WSA_FLAG_OVERLAPPED)) == -1) {
+		if ((common.udpSocket = WSASocket(AF_INET, SOCK_DGRAM, 0, 0, 0, WSA_FLAG_OVERLAPPED)) == -1) {
 			closesocket(common.udpSocket);
 			return FALSE;
 		}

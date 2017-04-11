@@ -117,18 +117,17 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		case IDC_CONNECT:
 			if (checkUserInput(hDlg)) {
-				char * dest = getDestination(hDlg);
-				int port = getPort(hDlg);
-				showMessageBox(hDlg, "TCP", "", MB_OK);
-				startTCP(hDlg, dest, port);
-				showMessageBox(hDlg, "UDP", "", MB_OK);
-				startUDP(hDlg, dest, port);
+				clientStart(hDlg);
+				bgTCPThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)startTCP, (LPVOID)hDlg, 0, 0);
+				bgUDPThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)startUDP, (LPVOID)hDlg, 0, 0);
+				swapButtons(hDlg, IDC_CONNECT, IDC_DISCONNECT);
 			}
 
 			break;
 
 		case IDC_DISCONNECT:
 			//disconnect here, network cleanup
+			clientStop(TRUE, TRUE);
 			WSACleanup();
 			swapButtons(hDlg, IDC_DISCONNECT, IDC_CONNECT);
 			break;
