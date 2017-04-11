@@ -120,6 +120,7 @@
     <ClInclude Include="libzplay.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="Network.h" />
+    <ClInclude Include="Node.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Semaphore.h" />
     <ClInclude Include="UI.h" />

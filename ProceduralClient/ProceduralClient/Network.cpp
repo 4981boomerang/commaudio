@@ -215,10 +215,7 @@ void startUDP(HWND hDlg) {
 	common.udpRunning = TRUE;
 	char * buf = { 0 };
 
-	memset(&common.mreq, 0, sizeof(common.mreq));
-	common.mreq.imr_multiaddr.s_addr = inet_addr(MCAST_IP);
-	common.mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-
+	
 	//dns query, an IP address would return itself
 	if (!(hp = gethostbyname(getDestination(hDlg)))) {
 		retVal = GetLastError();
@@ -244,10 +241,17 @@ void startUDP(HWND hDlg) {
 	}
 
 	if (buf == 0) {
-		buf = static_cast<char *>(malloc(1024 * sizeof(char)));
+		buf = static_cast<char *>(malloc(PACKET_SIZE * sizeof(char)));
 		common.rcvBufUDP.buf = buf;
 		common.rcvBufUDP.len = 1024;
 	}
+
+	memset(&common.mreq, 0, sizeof(common.mreq));
+	common.mreq.imr_multiaddr.s_addr = inet_addr(MCAST_IP);
+	common.mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+
+	//register for the multicast group
+	addToMultiCast(hDlg, common.udpSocket, common.mreq);
 
 	//register comp routine
 	if ((retVal = WSARecvFrom(common.udpSocket, &common.rcvBufUDP, 1, &recv, &flags, 0, 0, &common.udpOL, completionRoutineUDP)) == SOCKET_ERROR) {
@@ -260,9 +264,6 @@ void startUDP(HWND hDlg) {
 			return;
 		}
 	}
-
-	//register for the multicast group
-	addToMultiCast(hDlg, common.udpSocket, common.mreq);
 
 	//continuously listen for datagrams
 	//SleepEx will set the thread in an alertable state in which Windows
@@ -611,6 +612,7 @@ void addToMultiCast(HWND hDlg, SOCKET& s, ip_mreq& mreq) {
 void removeFromMultiCast(HWND hDlg, SOCKET& s, ip_mreq& mreq) {
 	int retVal;
 	if ((retVal = setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char*)&mreq, sizeof(mreq)) == -1)) {
+		retVal = WSAGetLastError();
 		showMessageBox(hDlg, "Cannot leave multicast group.", "Socket Option Error - SockOption Leave", MB_ICONERROR);
 	}
 }

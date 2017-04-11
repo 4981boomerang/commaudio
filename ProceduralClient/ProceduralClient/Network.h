@@ -65,7 +65,7 @@ typedef struct _common {
 	WSADATA wsadata;
 	DWORD recv;
 	DWORD flags;
-	OVERLAPPED tcpOL, udpOL;
+	OVERLAPPED tcpOL = { 0 }, udpOL = { 0 };
 	bool udpRunning, tcpRunning;
 	char messageBuffer[PACKET_SIZE];
 	bool file;
