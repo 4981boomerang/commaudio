@@ -237,7 +237,7 @@ public:
 	--
 	-- PROGRAMMER: Jamie Lee
 	--
-	-- INTERFACE: bool SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo);
+	-- INTERFACE: static bool SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo);
 	-- clientSock: A socket to send a message.
 	-- SocketInfo: The information of the socket.
 	--
@@ -247,7 +247,7 @@ public:
 	-- NOTES:
 	-- Sending a message in DataBuf in SocketInfo via TCP.
 	--------------------------------------------------------------------------*/
-	bool SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo);
+	static bool SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo);
 
 	/*------------------------------------------------------------------------------
 	-- FUNCTION: WorkThread

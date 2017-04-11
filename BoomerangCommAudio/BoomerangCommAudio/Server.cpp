@@ -840,24 +840,55 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 			memcpy(&header, SI->Buffer, sizeof(int));
 			switch (header)
 			{
-			case PH_REQ_SONG:
+			case PH_REQ_UPLOAD_SONG:
+			{
+				SI->IsFile = true;
+				SI->vecBuffer.clear();
+				ReqUploadSong songData;
+				memcpy(&songData, SI->Buffer, sizeof(ReqUploadSong));
+				SI->FileName = std::string(songData.filename);
+
+				std::string recvFileData(SI->Buffer + sizeof(ReqUploadSong), BytesTransferred - sizeof(ReqUploadSong));
+				SI->vecBuffer.push_back(recvFileData);
+
+				fopen_s(&SI->file, SI->FileName.c_str(), "wb");
+
+				sprintf_s(temp, STR_SIZE, "Upload - file: %s, title: %s, artist: %s",
+					songData.filename, songData.title, songData.artist);
+				Display(temp);
+			}
+			break;
+
+			case PH_REQ_DOWNLOAD_SONG:
+			{
+				ReqDownloadSong songData;
+				memcpy(&songData, SI->Buffer, sizeof(ReqDownloadSong));
+
+				SoundFilePacketizer packer(PACKET_SIZE);
+				packer.makePacketsFromFile(songData.filename);
+				long totalNumberOfPackets = packer.getTotalPackets();
+				int lastPacketSize = packer.getLastPackSize();
+
+				SI->BytesSEND = 0;
+				SI->SentBytesTotal = 0;
+				//send all packets except for last one
+				for (int i = 0; i < totalNumberOfPackets; i++)
 				{
-					SI->IsFile = true;
-					SI->vecBuffer.clear();
-					SongData songData;
-					memcpy(&songData, SI->Buffer, sizeof(SongData));
-					SI->FileName = std::string(songData.filename);
-
-					std::string recvFileData(SI->Buffer + sizeof(SongData), BytesTransferred - sizeof(SongData));
-					SI->vecBuffer.push_back(recvFileData);
-
-					fopen_s(&SI->file, SI->FileName.c_str(), "wb");
-
-					sprintf_s(temp, STR_SIZE, "Upload - file: %s, title: %s, artist: %s",
-						songData.filename, songData.title, songData.artist);
-					Display(temp);
+					SI->DataBuf.buf = packer.getNextPacket();
+					SI->DataBuf.len = PACKET_SIZE;
+					Server::SendTCP(SI->Socket, SI);
 				}
-				break;
+
+				SI->DataBuf.buf = packer.getNextPacket();
+				SI->DataBuf.len = lastPacketSize;
+				Server::SendTCP(SI->Socket, SI);
+
+				char complete[] = "EndOfPacket";
+				SI->DataBuf.buf = complete;
+				SI->DataBuf.len = strlen(complete) + 1;
+				Server::SendTCP(SI->Socket, SI);
+			}
+			break;
 
 			default:
 				break;
