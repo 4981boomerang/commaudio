@@ -64,15 +64,17 @@ struct ClientInformation
 
 class Server
 {
+public:
+	static WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
+	static LPSOCKET_INFORMATION SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
+	static CRITICAL_SECTION CriticalSection;
+	static DWORD EventTotal;
+	static std::map<SOCKET, ClientInformation> mapClient;
+
 private:
 	LPSOCKET_INFORMATION SocketInfo;
 	SOCKET tcp_listen;
-	std::map<SOCKET, ClientInformation> mapClient;
 	WSAEVENT AcceptEvent;
-	DWORD EventTotal = 0;
-	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
-	LPSOCKET_INFORMATION SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
-	CRITICAL_SECTION CriticalSection;
 	SOCKET AcceptSocket;
 
 	SOCKET sockUDP;
@@ -235,7 +237,7 @@ public:
 	--
 	-- PROGRAMMER: Jamie Lee
 	--
-	-- INTERFACE: bool SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo);
+	-- INTERFACE: static bool SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo);
 	-- clientSock: A socket to send a message.
 	-- SocketInfo: The information of the socket.
 	--
@@ -245,7 +247,7 @@ public:
 	-- NOTES:
 	-- Sending a message in DataBuf in SocketInfo via TCP.
 	--------------------------------------------------------------------------*/
-	bool SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo);
+	static bool SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo);
 
 	/*------------------------------------------------------------------------------
 	-- FUNCTION: WorkThread

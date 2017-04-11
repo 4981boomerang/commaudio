@@ -18,6 +18,14 @@ using std::cerr;
 using std::cout;
 using std::endl;
 using std::string;
+
+// initialize static memebers.
+WSAEVENT Server::EventArray[WSA_MAXIMUM_WAIT_EVENTS];
+LPSOCKET_INFORMATION Server::SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
+CRITICAL_SECTION Server::CriticalSection;
+DWORD Server::EventTotal = 0;
+std::map<SOCKET, ClientInformation> Server::mapClient;
+
 /*--------------------------------------------------------------------------
 -- FUNCTION: Server
 --
@@ -468,6 +476,7 @@ void Server::AcceptFunc()
 		SocketArray[EventTotal]->BytesRECV = 0;
 		SocketArray[EventTotal]->DataBuf.len = BUF_SIZE;
 		SocketArray[EventTotal]->DataBuf.buf = SocketArray[EventTotal]->Buffer;
+		SocketArray[EventTotal]->index = EventTotal;
 
 		if ((SocketArray[EventTotal]->Overlapped.hEvent = EventArray[EventTotal] =
 			WSACreateEvent()) == WSA_INVALID_EVENT)
@@ -704,6 +713,8 @@ bool Server::SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 
 void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED Overlapped, DWORD InFlags)
 {
+	char temp[STR_SIZE];
+
 	DWORD SendBytes, RecvBytes;
 	DWORD Flags;
 
@@ -712,18 +723,46 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 
 	if (Error != 0)
 	{
-		printf("I/O operation failed with error %d\n", Error);
+		sprintf_s(temp, STR_SIZE, "I/O operation failed with error %d", Error);
+		Display(temp);
 	}
 
 	if (BytesTransferred == 0)
 	{
-		printf("Closing socket %d\n", static_cast<int>(SI->Socket));
+		sprintf_s(temp, STR_SIZE, "Closing socket %d", static_cast<int>(SI->Socket));
+		Display(temp);
 	}
 
 	if (Error != 0 || BytesTransferred == 0)
 	{
-		closesocket(SI->Socket);
+		auto found = Server::mapClient.find(SI->Socket);
+		Server::mapClient.erase(found);
+
+		if (closesocket(SI->Socket) == SOCKET_ERROR)
+		{
+			sprintf_s(temp, STR_SIZE, "closesocket() failed with error %d", WSAGetLastError());
+		}
+
 		GlobalFree(SI);
+		WSACloseEvent(Server::EventArray[SI->index]);
+
+		// Cleanup SocketArray and EventArray by removing the socket event handle
+		// and socket information structure if they are not at the end of the
+		// arrays.
+
+		EnterCriticalSection(&Server::CriticalSection);
+
+		if ((SI->index) + 1 != Server::EventTotal)
+			for (int i = SI->index; i < Server::EventTotal; i++)
+			{
+				Server::EventArray[i] = Server::EventArray[i + 1];
+				Server::SocketArray[i] = Server::SocketArray[i + 1];
+			}
+
+		Server::EventTotal--;
+
+		LeaveCriticalSection(&Server::CriticalSection);
+
 		return;
 	}
 
@@ -801,24 +840,55 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 			memcpy(&header, SI->Buffer, sizeof(int));
 			switch (header)
 			{
-			case PH_REQ_SONG:
+			case PH_REQ_UPLOAD_SONG:
+			{
+				SI->IsFile = true;
+				SI->vecBuffer.clear();
+				ReqUploadSong songData;
+				memcpy(&songData, SI->Buffer, sizeof(ReqUploadSong));
+				SI->FileName = std::string(songData.filename);
+
+				std::string recvFileData(SI->Buffer + sizeof(ReqUploadSong), BytesTransferred - sizeof(ReqUploadSong));
+				SI->vecBuffer.push_back(recvFileData);
+
+				fopen_s(&SI->file, SI->FileName.c_str(), "wb");
+
+				sprintf_s(temp, STR_SIZE, "Upload - file: %s, title: %s, artist: %s",
+					songData.filename, songData.title, songData.artist);
+				Display(temp);
+			}
+			break;
+
+			case PH_REQ_DOWNLOAD_SONG:
+			{
+				ReqDownloadSong songData;
+				memcpy(&songData, SI->Buffer, sizeof(ReqDownloadSong));
+
+				SoundFilePacketizer packer(PACKET_SIZE);
+				packer.makePacketsFromFile(songData.filename);
+				long totalNumberOfPackets = packer.getTotalPackets();
+				int lastPacketSize = packer.getLastPackSize();
+
+				SI->BytesSEND = 0;
+				SI->SentBytesTotal = 0;
+				//send all packets except for last one
+				for (int i = 0; i < totalNumberOfPackets - 1; i++)
 				{
-					SI->IsFile = true;
-					SI->vecBuffer.clear();
-					SongData songData;
-					memcpy(&songData, SI->Buffer, sizeof(SongData));
-					SI->FileName = std::string(songData.filename);
-
-					std::string recvFileData(SI->Buffer + sizeof(SongData), BytesTransferred - sizeof(SongData));
-					SI->vecBuffer.push_back(recvFileData);
-
-					fopen_s(&SI->file, SI->FileName.c_str(), "wb");
-
-					sprintf_s(temp, STR_SIZE, "Upload - file: %s, title: %s, artist: %s",
-						songData.filename, songData.title, songData.artist);
-					Display(temp);
+					SI->DataBuf.buf = packer.getNextPacket();
+					SI->DataBuf.len = PACKET_SIZE;
+					Server::SendTCP(SI->Socket, SI);
 				}
-				break;
+
+				SI->DataBuf.buf = packer.getNextPacket();
+				SI->DataBuf.len = lastPacketSize;
+				Server::SendTCP(SI->Socket, SI);
+
+				char complete[] = "EndOfPacket";
+				SI->DataBuf.buf = complete;
+				SI->DataBuf.len = strlen(complete) + 1;
+				Server::SendTCP(SI->Socket, SI);
+			}
+			break;
 
 			default:
 				break;
