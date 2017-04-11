@@ -229,6 +229,12 @@ void startUDP(HWND hDlg) {
 		return;
 	}
 
+	if ((retVal = setsockopt(common.udpSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&flags, sizeof(flags))) == -1) {
+		showMessageBox(hDlg, "Error setting socket option.", "Set Socket Option Error", MB_ICONERROR);
+		closesocket(common.udpSocket);
+		return;
+	}
+
 	common.serverAddrUDP.sin_family = AF_INET;
 	common.serverAddrUDP.sin_port = htons(UDP_PORT);
 	memcpy((char *)&common.serverAddrUDP.sin_addr, common.udpHP->h_addr, common.udpHP->h_length);
