@@ -85,6 +85,9 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>Ws2_32.lib;libzplay.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -118,11 +121,11 @@
     <ClCompile Include="Microphone.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Packetizer\Packetizer\Packetizer.h" />
     <ClInclude Include="ClientTCP.h" />
     <ClInclude Include="libzplay.h" />
     <ClInclude Include="MenuSettings.h" />
     <ClInclude Include="Microphone.h" />
+    <ClInclude Include="Packetizer.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MYMENU.rc" />

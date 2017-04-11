@@ -38,7 +38,7 @@
     <ClInclude Include="libzplay.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Packetizer\Packetizer\Packetizer.h">
+    <ClInclude Include="Packetizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

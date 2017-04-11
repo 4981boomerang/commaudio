@@ -73,6 +73,7 @@ private:
 	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
 	LPSOCKET_INFORMATION SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
 	CRITICAL_SECTION CriticalSection;
+	SOCKET AcceptSocket;
 
 	SOCKET sockUDP;
 	std::map <int, std::string> playlist; // the library
@@ -268,6 +269,29 @@ public:
 	-- it complets the message in WorkerRoutine.
 	--------------------------------------------------------------------------*/
 	void WorkThread();
+
+	/*------------------------------------------------------------------------------
+	-- FUNCTION: WorkerThread
+	--
+	-- DATE: Apr. 11, 2017
+	--
+	-- REVISIONS:
+	-- 1.0  - [luxes] - Description
+	--
+	-- DESIGNER: Jamie Lee
+	--
+	-- PROGRAMMER: Jamie Lee
+	--
+	-- INTERFACE: DWORD WINAPI WorkerThread(LPVOID lpParameter);
+	-- lpParameter: An WSAEVENT for an acceptance.
+	--
+	-- RETURNS:
+	-- void
+	--
+	-- NOTES:
+	-- When gets an acceptance, a thread is created with this function.
+	--------------------------------------------------------------------------*/
+	DWORD WINAPI WorkerThread(LPVOID lpParameter);
 };
 
 /*------------------------------------------------------------------------------

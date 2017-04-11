@@ -178,7 +178,6 @@ void startTCP(HWND hDlg) {
 
 	swapButtons(hDlg, IDC_CONNECT, IDC_DISCONNECT);
 	SetDlgItemText(hDlg, IDC_EDIT1, "Connected");
-	init(common.player);
 }
 
 /*---------------------------------------------------------------------------------
@@ -205,7 +204,6 @@ void startUDP(HWND hDlg) {
 	hostent * hp;
 	common.udpRunning = TRUE;
 	char * buf = { 0 };
-
 	
 	//dns query, an IP address would return itself
 	if (!(hp = gethostbyname(getDestination(hDlg)))) {
@@ -261,6 +259,8 @@ void startUDP(HWND hDlg) {
 			return;
 		}
 	}
+
+	init(common.player);
 
 	//continuously listen for datagrams
 	//SleepEx will set the thread in an alertable state in which Windows

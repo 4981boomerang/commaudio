@@ -140,10 +140,12 @@ void init(ZPlay * player) {
 	char buffer[21000];
 
 	//load buffer from cbuff
-	if (!common.initial) {
-		for (int i = 0; sizeof(buffer) / PACKET_SIZE; ++i) {
-			strcat_s(buffer, PACKET_SIZE,  common.cbuff.pop().c_str());
-		}
+	while (!common.cbuff.isReadyForRead(0.5)) {
+		Sleep(1000);
+	}
+
+	for (int i = 0; i < 210000; i += 1024) {
+		strcat_s(buffer, 1024, common.cbuff.pop().c_str());
 	}
 
 	if ((player->OpenStream(0, 1, &buffer, 21000, sfMp3)) == 0) {
