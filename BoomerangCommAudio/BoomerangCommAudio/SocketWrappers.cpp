@@ -1,10 +1,10 @@
+#include "stdafx.h"
+
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 
-#include "stdafx.h"
 #include <iostream>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <windows.h>
 
 #include "SocketWrappers.h"
 
@@ -152,3 +152,5 @@ int waitSingleEvent(WSAEVENT event)
 	}
 	return 0;
 }
+
+
