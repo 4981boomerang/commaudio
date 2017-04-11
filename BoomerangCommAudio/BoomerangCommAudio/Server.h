@@ -64,15 +64,17 @@ struct ClientInformation
 
 class Server
 {
+public:
+	static WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
+	static LPSOCKET_INFORMATION SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
+	static CRITICAL_SECTION CriticalSection;
+	static DWORD EventTotal;
+	static std::map<SOCKET, ClientInformation> mapClient;
+
 private:
 	LPSOCKET_INFORMATION SocketInfo;
 	SOCKET tcp_listen;
-	std::map<SOCKET, ClientInformation> mapClient;
 	WSAEVENT AcceptEvent;
-	DWORD EventTotal = 0;
-	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
-	LPSOCKET_INFORMATION SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
-	CRITICAL_SECTION CriticalSection;
 	SOCKET AcceptSocket;
 
 	SOCKET sockUDP;

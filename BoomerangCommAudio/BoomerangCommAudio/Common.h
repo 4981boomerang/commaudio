@@ -39,6 +39,7 @@ typedef struct _SOCKET_INFORMATION {
 	std::string FileName;
 	std::vector<std::string> vecBuffer;
 	FILE* file;
+	DWORD index;
 } SOCKET_INFORMATION, *LPSOCKET_INFORMATION;
 
 enum PACKET_HEADER

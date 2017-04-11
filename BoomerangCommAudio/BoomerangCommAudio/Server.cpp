@@ -18,6 +18,14 @@ using std::cerr;
 using std::cout;
 using std::endl;
 using std::string;
+
+// initialize static memebers.
+WSAEVENT Server::EventArray[WSA_MAXIMUM_WAIT_EVENTS];
+LPSOCKET_INFORMATION Server::SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
+CRITICAL_SECTION Server::CriticalSection;
+DWORD Server::EventTotal = 0;
+std::map<SOCKET, ClientInformation> Server::mapClient;
+
 /*--------------------------------------------------------------------------
 -- FUNCTION: Server
 --
@@ -468,6 +476,7 @@ void Server::AcceptFunc()
 		SocketArray[EventTotal]->BytesRECV = 0;
 		SocketArray[EventTotal]->DataBuf.len = BUF_SIZE;
 		SocketArray[EventTotal]->DataBuf.buf = SocketArray[EventTotal]->Buffer;
+		SocketArray[EventTotal]->index = EventTotal;
 
 		if ((SocketArray[EventTotal]->Overlapped.hEvent = EventArray[EventTotal] =
 			WSACreateEvent()) == WSA_INVALID_EVENT)
@@ -704,6 +713,8 @@ bool Server::SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
 
 void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED Overlapped, DWORD InFlags)
 {
+	char temp[STR_SIZE];
+
 	DWORD SendBytes, RecvBytes;
 	DWORD Flags;
 
@@ -712,18 +723,46 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 
 	if (Error != 0)
 	{
-		printf("I/O operation failed with error %d\n", Error);
+		sprintf_s(temp, STR_SIZE, "I/O operation failed with error %d", Error);
+		Display(temp);
 	}
 
 	if (BytesTransferred == 0)
 	{
-		printf("Closing socket %d\n", static_cast<int>(SI->Socket));
+		sprintf_s(temp, STR_SIZE, "Closing socket %d", static_cast<int>(SI->Socket));
+		Display(temp);
 	}
 
 	if (Error != 0 || BytesTransferred == 0)
 	{
-		closesocket(SI->Socket);
+		auto found = Server::mapClient.find(SI->Socket);
+		Server::mapClient.erase(found);
+
+		if (closesocket(SI->Socket) == SOCKET_ERROR)
+		{
+			sprintf_s(temp, STR_SIZE, "closesocket() failed with error %d", WSAGetLastError());
+		}
+
 		GlobalFree(SI);
+		WSACloseEvent(Server::EventArray[SI->index]);
+
+		// Cleanup SocketArray and EventArray by removing the socket event handle
+		// and socket information structure if they are not at the end of the
+		// arrays.
+
+		EnterCriticalSection(&Server::CriticalSection);
+
+		if ((SI->index) + 1 != Server::EventTotal)
+			for (int i = SI->index; i < Server::EventTotal; i++)
+			{
+				Server::EventArray[i] = Server::EventArray[i + 1];
+				Server::SocketArray[i] = Server::SocketArray[i + 1];
+			}
+
+		Server::EventTotal--;
+
+		LeaveCriticalSection(&Server::CriticalSection);
+
 		return;
 	}
 
