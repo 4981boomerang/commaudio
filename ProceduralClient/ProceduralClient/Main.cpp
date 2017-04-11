@@ -60,7 +60,7 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	common.player = player;
 
 	//connection thread
-	HANDLE bgTCPThread = NULL, bgUDPThread = NULL;
+	HANDLE bgTCPThread = NULL, bgUDPThread = NULL, uploadthread = NULL;
 
 	switch (uMsg)
 	{
@@ -158,6 +158,7 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case IDC_UPLOAD:
+			uploadthread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)uploadFile, (LPVOID)hDlg, 0, 0);
 			break;
 
 		case IDC_DOWNLOAD:

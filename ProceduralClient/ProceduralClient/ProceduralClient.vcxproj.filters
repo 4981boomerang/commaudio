@@ -30,6 +30,9 @@
     <ClCompile Include="AudioPlayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\BoomerangCommAudio\BoomerangCommAudio\Packetizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h">
@@ -57,6 +60,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AudioPlayer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\BoomerangCommAudio\BoomerangCommAudio\Packetizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\BoomerangCommAudio\BoomerangCommAudio\Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
