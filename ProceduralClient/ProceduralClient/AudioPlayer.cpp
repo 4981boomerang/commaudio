@@ -5,6 +5,7 @@
 
 using namespace libZPlay;
 
+extern commonResources common;
 int __stdcall callbackFunc(void * instance, void * userData, TCallbackMessage message, unsigned int param1, unsigned int param2);
 
 /*--------------------------------------------------------------------------------------------
@@ -137,6 +138,13 @@ void stop(ZPlay * player) {
 */
 void init(ZPlay * player) {
 	char buffer[21000];
+
+	//load buffer from cbuff
+	if (!common.initial) {
+		for (int i = 0; sizeof(buffer) / PACKET_SIZE; ++i) {
+			strcat_s(buffer, PACKET_SIZE,  common.cbuff.pop().c_str());
+		}
+	}
 
 	if ((player->OpenStream(0, 1, &buffer, 21000, sfMp3)) == 0) {
 		//error occurred opening the stream

@@ -13,8 +13,6 @@
 #include "Network.h"
 
 #define BUFSIZE 1024
-
-extern commonResources common;
 	
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   createPlayer

@@ -15,7 +15,7 @@
 
 #include "UI.h"
 #include "CBuff.h"
-//#include "AudioPlayer.h"
+#include "AudioPlayer.h"
 
 constexpr int TCP_PORT = 5000;
 constexpr int UDP_PORT = 5001;
@@ -59,6 +59,7 @@ typedef struct {
 
 
 typedef struct _common {
+	HWND hDlg;
 	sockaddr_in serverAddrTCP, serverAddrUDP;
 	SOCKET tcpSocket, udpSocket;
 	WSABUF sendBufUDP, sendBufTCP, rcvBufUDP, rcvBufTCP;
@@ -68,10 +69,11 @@ typedef struct _common {
 	OVERLAPPED tcpOL = { 0 }, udpOL = { 0 };
 	bool udpRunning, tcpRunning;
 	char messageBuffer[PACKET_SIZE];
-	bool file;
+	bool file, initial = TRUE;
 	hostent * hp, * udpHP;
 	ip_mreq mreq;
 	CBuff cbuff;
+	libZPlay::ZPlay * player;
 } commonResources;
 
 	void CALLBACK completionRoutineUDP(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
@@ -88,15 +90,11 @@ typedef struct _common {
 	bool downloadFile();
 	bool uploadFile();
 
-	void callbackRoutine(DWORD error, DWORD transferred, DWORD flags);
-
 	//Multicast Functions
 	void addToMultiCast(HWND, SOCKET&, ip_mreq&);
 	void removeFromMultiCast(HWND, SOCKET&, ip_mreq&);
 
 	void startTCP(HWND hDlg);
 	void startUDP(HWND hDlg);
-
-	commonResources& getCommon();
 
 #endif

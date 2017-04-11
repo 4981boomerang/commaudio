@@ -29,6 +29,7 @@
 libZPlay::ZPlay * player = libZPlay::CreateZPlay();
 int __stdcall callbackFunc(void * instance, void * userData, libZPlay::TCallbackMessage message, unsigned int param1, unsigned int param2);
 
+extern commonResources common;
 /*-----------------------------------------------------------------------------------------------
 -- FUNCTION:   DialogProc
 --
@@ -56,6 +57,7 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	LVITEM lvI;
 	LVTILEVIEWINFO tvi = { 0 };
 	HWND songList = GetDlgItem(hDlg, IDC_SONGLIST);
+	common.player = player;
 
 	//connection thread
 	HANDLE bgTCPThread = NULL, bgUDPThread = NULL;
@@ -246,6 +248,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hprevInstance, LPSTR lspszCmdParam
 	SetMenu(hDlg, hMenu);
 	ShowWindow(hDlg, nCmdShow);
 	UpdateWindow(hDlg);
+
+	common.hDlg = hDlg;
 	
 	while ((ret = GetMessage(&msg, 0, 0, 0)) != 0) {
 		if (ret == -1)

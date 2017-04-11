@@ -65,31 +65,6 @@ void clientStop(bool stopTCP, bool stopUDP) {
 }
 
 /*--------------------------------------------------------------------------
--- FUNCTION: completionRoutine
---
--- DATE: APR. 09, 2017
---
--- REVISIONS: 
--- Version 1.0 - [EY] - 2016/APR/09 - Created Function 
---
--- DESIGNER: Eva Yu
---
--- PROGRAMMER: Eva Yu
---
--- INTERFACE: void completionRoutine (DWORD error, DWORD transferred, LPWSAOVERLAPPED ol, DWORD flags)
--- DWORD error -- the error value
--- DWORD transferred -- number of bytes transderref
--- DWORD flags -- flags assocated with wsarecv
---
--- NOTES:
--- static function to help direct to class function
---------------------------------------------------------------------------*/
-void callbackRoutine(DWORD error, DWORD transferred, LPWSAOVERLAPPED ol, DWORD flags)
-{
-	
-}
-
-/*--------------------------------------------------------------------------
 -- FUNCTION: callbackRoutine
 --
 -- DATE: APR. 09, 2017
@@ -121,6 +96,15 @@ void CALLBACK completionRoutineUDP(DWORD error, DWORD transferred, LPWSAOVERLAPP
 		//push data received into the circular buffer
 		common.cbuff.push_back(common.rcvBufUDP.buf);
 
+		/*
+		if (common.initial) {
+			if (common.cbuff.isReadyForRead(0.2)) {
+				init(common.player);
+				common.initial = FALSE;
+			}
+		}
+		*/
+		
 		//empty the receiving buffer
 		memset(common.rcvBufUDP.buf, 0, sizeof(common.rcvBufUDP.buf));
 
