@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string.h>
 #include <iterator>
+#include <fstream>
 
 #pragma comment(lib, "Ws2_32.lib")
 #pragma warning(disable: 4996)
@@ -381,13 +382,13 @@ void Server::RunServer(SOCKET& serverSock)
 		return;
 	}
 
-	if ((EventArray[0] = WSACreateEvent()) == WSA_INVALID_EVENT)
+	/*if ((EventArray[0] = WSACreateEvent()) == WSA_INVALID_EVENT)
 	{
 		sprintf_s(temp, STR_SIZE, "WSACreateEvent() failed with error %d", WSAGetLastError());
 		Display(temp);
 		return;
 	}
-	AcceptEvent = EventArray[0];
+	AcceptEvent = EventArray[0];*/
 
 	sprintf_s(temp, STR_SIZE, "Listen TCP port %d", g_port);
 	Display(temp);
@@ -405,30 +406,48 @@ void Server::AcceptFunc()
 	struct	sockaddr_in client;
 	char temp[STR_SIZE];
 
+	if ((AcceptEvent = WSACreateEvent()) == WSA_INVALID_EVENT)
+	{
+		printf("WSACreateEvent() failed with error %d\n", WSAGetLastError());
+		return;
+	}
+
 	EventTotal = 1;
+
 	while (true)
 	{
 		client_len = sizeof(client);
-		SOCKET acceptedSocket;
-		if ((acceptedSocket = accept(tcp_listen, (struct sockaddr *)&client, &client_len)) == INVALID_SOCKET)
+		//SOCKET acceptedSocket;
+		if ((AcceptSocket = accept(tcp_listen, (struct sockaddr *)&client, &client_len)) == INVALID_SOCKET)
 		{
 			sprintf_s(temp, STR_SIZE, "accept() failed with error %d", WSAGetLastError());
 			Display(temp);
 			break;
 		}
 
+		/*std::thread workThread(&Server::WorkerThread, this, (LPVOID)AcceptEvent);
+		workThread.detach();*/
+
 		char* acceptedClientIp = inet_ntoa(client.sin_addr);
-		SocketInfo->Socket = acceptedSocket;
-		sprintf_s(temp, STR_SIZE, "Socket number %d connected: IP=%s", (int)acceptedSocket, acceptedClientIp);
+		SocketInfo->Socket = AcceptSocket;
+		sprintf_s(temp, STR_SIZE, "Socket number %d connected: IP=%s", (int)AcceptSocket, acceptedClientIp);
 		Display(temp);
 
-		SendInitialInfo(acceptedSocket, SocketInfo);
+
+		SendInitialInfo(AcceptSocket, SocketInfo);
 
 		// Mapping the accepted client.
 		ClientInformation clientInformation;
 		sprintf(clientInformation.ip, "%s", acceptedClientIp);
 		sprintf(clientInformation.username, "%s", "Unknown");
-		mapClient[acceptedSocket] = clientInformation;
+		mapClient[AcceptSocket] = clientInformation;
+
+		if (WSASetEvent(AcceptEvent) == FALSE)
+		{
+			sprintf_s(temp, STR_SIZE, "WSASetEvent failed with error %d", WSAGetLastError());
+			Display(temp);
+			return;
+		}
 
 		// completion routines
 		EnterCriticalSection(&CriticalSection);
@@ -443,7 +462,7 @@ void Server::AcceptFunc()
 		}
 
 		// Fill in the details of our accepted socket.
-		SocketArray[EventTotal]->Socket = acceptedSocket;
+		SocketArray[EventTotal]->Socket = AcceptSocket;
 		ZeroMemory(&(SocketArray[EventTotal]->Overlapped), sizeof(OVERLAPPED));
 		SocketArray[EventTotal]->BytesSEND = 0;
 		SocketArray[EventTotal]->BytesRECV = 0;
@@ -550,14 +569,6 @@ void Server::WorkThread()
 
 		// Create a socket information structure to associate with the accepted socket.
 
-		if ((SocketInfo = (LPSOCKET_INFORMATION)GlobalAlloc(GPTR,
-			sizeof(SOCKET_INFORMATION))) == NULL)
-		{
-			sprintf_s(temp, STR_SIZE, "GlobalAlloc() failed with error %d", GetLastError());
-			Display(temp);
-			return;
-		}
-
 		Flags = 0;
 		if (WSARecv(SI->Socket, &(SI->DataBuf), 1, &RecvBytes, &Flags,
 			&(SI->Overlapped), WorkerRoutine) == SOCKET_ERROR)
@@ -575,6 +586,80 @@ void Server::WorkThread()
 	}
 
 	return;
+}
+
+DWORD WINAPI Server::WorkerThread(LPVOID lpParameter)
+{
+	char temp[STR_SIZE];
+
+	DWORD Flags;
+	LPSOCKET_INFORMATION SocketInfo;
+	WSAEVENT EventArray[1];
+	DWORD Index;
+	DWORD RecvBytes;
+
+	// Save the accept event in the event array.
+
+	EventArray[0] = (WSAEVENT)lpParameter;
+
+	while (TRUE)
+	{
+		// Wait for accept() to signal an event and also process WorkerRoutine() returns.
+
+		while (TRUE)
+		{
+			Index = WSAWaitForMultipleEvents(1, EventArray, FALSE, WSA_INFINITE, TRUE);
+
+			if (Index == WSA_WAIT_FAILED)
+			{
+				printf("WSAWaitForMultipleEvents failed with error %d\n", WSAGetLastError());
+				return FALSE;
+			}
+
+			if (Index != WAIT_IO_COMPLETION)
+			{
+				// An accept() call event is ready - break the wait loop
+				break;
+			}
+		}
+
+		WSAResetEvent(EventArray[Index - WSA_WAIT_EVENT_0]);
+
+		// Create a socket information structure to associate with the accepted socket.
+
+		if ((SocketInfo = (LPSOCKET_INFORMATION)GlobalAlloc(GPTR,
+			sizeof(SOCKET_INFORMATION))) == NULL)
+		{
+			printf("GlobalAlloc() failed with error %d\n", GetLastError());
+			return FALSE;
+		}
+
+		// Fill in the details of our accepted socket.
+
+		SocketInfo->Socket = AcceptSocket;
+		ZeroMemory(&(SocketInfo->Overlapped), sizeof(WSAOVERLAPPED));
+		SocketInfo->BytesSEND = 0;
+		SocketInfo->BytesRECV = 0;
+		SocketInfo->DataBuf.len = DATA_BUFSIZE;
+		SocketInfo->DataBuf.buf = SocketInfo->Buffer;
+
+		Flags = 0;
+		if (WSARecv(SocketInfo->Socket, &(SocketInfo->DataBuf), 1, &RecvBytes, &Flags,
+			&(SocketInfo->Overlapped), WorkerRoutine) == SOCKET_ERROR)
+		{
+			if (WSAGetLastError() != WSA_IO_PENDING)
+			{
+				printf_s(temp, STR_SIZE, "WSARecv() failed with error %d\n", WSAGetLastError());
+				Display(temp);
+				return FALSE;
+			}
+		}
+
+		printf_s(temp, STR_SIZE, "Socket %d connected", (int)AcceptSocket);
+		Display(temp);
+	}
+
+	return TRUE;
 }
 
 bool Server::SendTCP(SOCKET& clientSock, LPSOCKET_INFORMATION SocketInfo)
@@ -681,39 +766,63 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 	else
 	{
 		SI->BytesRECV = 0;
+		SI->PacketsRECV++;
 
 		// Now that there are no more bytes to send post another WSARecv() request.
 		char temp[STR_SIZE];
 
-		int header;
-		memcpy(&header, SI->Buffer, sizeof(int));
-		switch (header)
+		if (SI->IsFile)
 		{
-		case PH_REQ_SONG:
-			SI->IsFile = true;
-			SI->vecBuffer.clear();
-			SongData songData;
-			//SongData* songDataTest = reinterpret_cast<SongData*>(SI->Buffer);
-			memcpy(&songData, SI->Buffer, sizeof(SongData));
-			SI->FileName = std::string(songData.filename);
-			sprintf_s(temp, STR_SIZE, "Upload - file: %s, title: %s, artist: %s", songData.filename, songData.title, songData.artist);
-			Display(temp);
-			break;
-
-		case PH_DATA_PACKET_SONG:
-			if (SI->IsFile)
+			std::string recvFileData(SI->Buffer, BytesTransferred);
+			size_t found = recvFileData.find("EndOfPacket");
+			if (found != std::string::npos)
 			{
-				size_t dataLen = strlen(SI->Buffer);
-				std::string recvFileData(SI->Buffer, dataLen);
-				SI->vecBuffer.push_back(recvFileData);
-			}
-			break;
+				SI->IsFile = false;
+				SI->vecBuffer.push_back(recvFileData.substr(0, found));
 
-		case PH_END_PACKET_SONG:
-			SI->IsFile = false;
-			SaveSongFile(SI->FileName, SI->vecBuffer);
-			sprintf_s(temp, STR_SIZE, "Save a song: %s", SI->FileName.c_str());
-			break;
+				fwrite(SI->Buffer, 1, found, SI->file);
+				fclose(SI->file);
+
+				sprintf_s(temp, STR_SIZE, "Save a song file: %s", SI->FileName.c_str());
+				Display(temp);
+			}
+			else
+			{
+				SI->vecBuffer.push_back(recvFileData);
+				fwrite(SI->Buffer, 1, BytesTransferred, SI->file);
+			}
+
+			sprintf_s(temp, STR_SIZE, "default: length=%d", BytesTransferred);
+			Display(temp);
+		}
+		else
+		{
+			int header;
+			memcpy(&header, SI->Buffer, sizeof(int));
+			switch (header)
+			{
+			case PH_REQ_SONG:
+				{
+					SI->IsFile = true;
+					SI->vecBuffer.clear();
+					SongData songData;
+					memcpy(&songData, SI->Buffer, sizeof(SongData));
+					SI->FileName = std::string(songData.filename);
+
+					std::string recvFileData(SI->Buffer + sizeof(SongData), BytesTransferred - sizeof(SongData));
+					SI->vecBuffer.push_back(recvFileData);
+
+					fopen_s(&SI->file, SI->FileName.c_str(), "wb");
+
+					sprintf_s(temp, STR_SIZE, "Upload - file: %s, title: %s, artist: %s",
+						songData.filename, songData.title, songData.artist);
+					Display(temp);
+				}
+				break;
+
+			default:
+				break;
+			}
 		}
 
 		Flags = 0;
@@ -731,5 +840,7 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 				return;
 			}
 		}
+
+		//SleepEx(INFINITE, TRUE);
 	}
 }
