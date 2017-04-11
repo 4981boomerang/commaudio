@@ -250,3 +250,4 @@ paket-files/
 # JetBrains Rider
 .idea/
 *.sln.iml
+/BoomerangCommAudio/BoomerangCommAudio/06 - Little Wing.flac
