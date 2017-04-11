@@ -26,6 +26,8 @@
 //Custom Headers
 #include "Main.h"
 
+int __stdcall callbackFunc(void * instance, void * userData, libZPlay::TCallbackMessage message, unsigned int param1, unsigned int param2);
+
 /*-----------------------------------------------------------------------------------------------
 -- FUNCTION:   DialogProc
 --
@@ -53,6 +55,9 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	LVITEM lvI;
 	LVTILEVIEWINFO tvi = { 0 };
 	HWND songList = GetDlgItem(hDlg, IDC_SONGLIST);
+	libZPlay::ZPlay * player = libZPlay::CreateZPlay();
+
+	init(player);
 
 	//connection thread
 	HANDLE bgTCPThread = NULL, bgUDPThread = NULL;
@@ -60,6 +65,9 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg)
 	{
 	case WM_INITDIALOG:
+
+		SetDlgItemText(hDlg, IDC_EDIT1, "Not Connected");
+
 		SendMessage(songList, LVM_SETVIEW, (WPARAM)LV_VIEW_TILE, 0);
 
 		tvi.cbSize = sizeof(LVTILEVIEWINFO);
@@ -130,6 +138,7 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			clientStop(TRUE, TRUE);
 			WSACleanup();
 			swapButtons(hDlg, IDC_DISCONNECT, IDC_CONNECT);
+			SetDlgItemText(hDlg, IDC_EDIT1, "Not Connected");
 			break;
 
 		case IDC_CHOOSEFILE:
@@ -149,17 +158,16 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case IDC_PLAY:
 			//change the "Play" button to "Pause"
 			swapButtons(hDlg, IDC_PLAY, IDC_PAUSE);
-			//AudioPlayer::instance().play();
+			play(hDlg, player);
 			break;
 
 		case IDC_PAUSE:
 			//change the "Pause" button to "Play"
 			swapButtons(hDlg, IDC_PAUSE, IDC_PLAY);
-			//AudioPlayer::instance().pause();
+			pause(hDlg, player);
 			break;
 
 		case IDC_NEXT:
-			addSingleListItem(hDlg);
 			break;
 
 		case IDC_PREV:
@@ -245,5 +253,3 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hprevInstance, LPSTR lspszCmdParam
 
 	return (int)msg.wParam;
 }
-
-

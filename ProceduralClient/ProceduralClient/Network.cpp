@@ -22,6 +22,10 @@ commonResources common;
 -----------------------------------------------------------------------------------*/
 bool clientStart(HWND hDlg) {
 	WORD wVersionRequested = MAKEWORD(2, 2);
+	WSADATA wsadata = { 0 };
+
+	common.wsadata = wsadata;
+
 	if ((WSAStartup(wVersionRequested, &common.wsadata)) == -1) {
 		//show user there is an error
 		showMessageBox(hDlg, "Cannot start WSAStartup", "WSAStartup Error", MB_ICONERROR);
@@ -188,6 +192,7 @@ void startTCP(HWND hDlg) {
 	}
 
 	swapButtons(hDlg, IDC_CONNECT, IDC_DISCONNECT);
+	SetDlgItemText(hDlg, IDC_EDIT1, "Connected");
 }
 
 /*---------------------------------------------------------------------------------
@@ -617,8 +622,8 @@ void addToMultiCast(HWND hDlg, SOCKET& s, ip_mreq& mreq) {
 -----------------------------------------------------------------------------------*/
 void removeFromMultiCast(HWND hDlg, SOCKET& s, ip_mreq& mreq) {
 	int retVal;
-	if ((retVal = setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char*)&mreq, sizeof(mreq)) == -1)) {
+	if ((retVal = setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char*)&mreq, sizeof(mreq))) == -1) {
 		retVal = WSAGetLastError();
-		showMessageBox(hDlg, "Cannot leave multicast group.", "Socket Option Error - SockOption Leave", MB_ICONERROR);
+		//showMessageBox(hDlg, "Cannot leave multicast group.", "Socket Option Error - SockOption Leave", MB_ICONERROR);
 	}
 }
