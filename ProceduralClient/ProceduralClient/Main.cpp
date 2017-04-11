@@ -124,6 +124,7 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case IDC_CONNECT:
 			if (checkUserInput(hDlg)) {
 				clientStart(hDlg);
+				//TODO: initialize the audio stream
 				bgTCPThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)startTCP, (LPVOID)hDlg, 0, 0);
 				bgUDPThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)startUDP, (LPVOID)hDlg, 0, 0);
 				swapButtons(hDlg, IDC_CONNECT, IDC_DISCONNECT);
