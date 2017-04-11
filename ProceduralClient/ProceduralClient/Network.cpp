@@ -116,7 +116,7 @@ void CALLBACK completionRoutineUDP(DWORD error, DWORD transferred, LPWSAOVERLAPP
 		//no error here
 	case 0:
 		//push data received into the circular buffer
-		//AudioPlayer::instance().getBuf().push_back(rcvBufUDP.buf);
+		common.cbuff.push_back(common.rcvBufUDP.buf);
 
 		//empty the receiving buffer
 		memset(common.rcvBufUDP.buf, 0, sizeof(common.rcvBufUDP.buf));
@@ -126,8 +126,8 @@ void CALLBACK completionRoutineUDP(DWORD error, DWORD transferred, LPWSAOVERLAPP
 			retVal = WSAGetLastError();
 
 			if (retVal != WSA_IO_PENDING) {
-				closesocket(common.udpSocket);
 				clientStop(FALSE, TRUE);
+				closesocket(common.udpSocket);
 				return;
 			}
 		}
@@ -135,12 +135,10 @@ void CALLBACK completionRoutineUDP(DWORD error, DWORD transferred, LPWSAOVERLAPP
 		
 
 	case WSA_OPERATION_ABORTED:
-		//ui->showMessageBox("Error: Operation Aborted", "Operation Aborted", MB_ICONERROR);
 		clientStop(FALSE, TRUE);
 		break;
 
 	default:
-		clientStop(FALSE, TRUE);
 		break;
 	}
 }
@@ -215,6 +213,7 @@ void startUDP(HWND hDlg) {
 	DWORD flags = MSG_PARTIAL, recv;
 	hostent * hp;
 	common.udpRunning = TRUE;
+	char * buf = { 0 };
 
 	memset(&common.mreq, 0, sizeof(common.mreq));
 	common.mreq.imr_multiaddr.s_addr = inet_addr(MCAST_IP);
@@ -242,6 +241,12 @@ void startUDP(HWND hDlg) {
 		closesocket(common.udpSocket);
 		showMessageBox(hDlg, "Cannot Bind Socket, Aborting...", "Socket Bind Error", MB_OK | MB_ICONERROR);
 		return;
+	}
+
+	if (buf == 0) {
+		buf = static_cast<char *>(malloc(1024 * sizeof(char)));
+		common.rcvBufUDP.buf = buf;
+		common.rcvBufUDP.len = 1024;
 	}
 
 	//register comp routine

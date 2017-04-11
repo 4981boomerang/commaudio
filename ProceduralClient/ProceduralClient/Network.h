@@ -14,6 +14,7 @@
 #include <thread>
 
 #include "UI.h"
+#include "CBuff.h"
 //#include "AudioPlayer.h"
 
 constexpr int TCP_PORT = 5000;
@@ -70,6 +71,7 @@ typedef struct _common {
 	bool file;
 	hostent * hp, * udpHP;
 	ip_mreq mreq;
+	CBuff cbuff;
 } commonResources;
 
 	void CALLBACK completionRoutineUDP(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);

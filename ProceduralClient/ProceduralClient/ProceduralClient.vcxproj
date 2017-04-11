@@ -110,15 +110,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CBuff.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Network.cpp" />
     <ClCompile Include="UI.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CBuff.h" />
     <ClInclude Include="libzplay.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="Network.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Semaphore.h" />
     <ClInclude Include="UI.h" />
   </ItemGroup>
   <ItemGroup>
