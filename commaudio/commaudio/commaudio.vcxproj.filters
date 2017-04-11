@@ -39,10 +39,10 @@
     <ClInclude Include="Headers\Semaphore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\Network.h">
+    <ClInclude Include="Headers\Microphone.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\Microphone.h">
+    <ClInclude Include="Headers\Network.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

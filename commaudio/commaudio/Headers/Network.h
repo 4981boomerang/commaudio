@@ -143,7 +143,7 @@ public:
 	void startUDPthread() {
 		UDPthread = std::thread( [this] { this->startUDP(); });
 	};
-
+	
 private:
 	void startTCP();
 	void startUDP();
@@ -151,7 +151,7 @@ private:
 	std::thread TCPthread;
 	std::thread UDPthread;
 	SOCKET tcpSocket, udpSocket;
-	sockaddr_in serverAddr;
+	sockaddr_in serverAddrTCP, serverAddrUDP;
 	WSAOVERLAPPED tcpOL, udpOL;
 	WSADATA wsadata;
 	WSABUF sendBufUDP, sendBufTCP, rcvBufUDP, rcvBufTCP;

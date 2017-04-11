@@ -1,54 +1,7 @@
-#include "../Headers/Network.h"
+#include "Network.h"
 
 
-/*---------------------------------------------------------------------------------
--- FUNCTION:	  Network
---
--- DATE:		  April 3, 2017
---
--- DESIGNER:	  Michael Goll
---
--- DEVELOPER:     Michael Goll
---
--- INTERFACE:     Network::Network(UI * uiOrig)
---
--- PARAMETER:     UI * uiOrig - The original UI object created in main.
---
--- RETURNS:       N/A
---
--- REVISIONS:
---
--- NOTES:         Creates the network object and initializes member variables.
------------------------------------------------------------------------------------*/
-Network::Network(UI * uiOrig) : serverAddrTCP{ 0 }, serverAddrUDP{ 0 }, wsadata{ 0 }, sendBufTCP{ 0 }, sendBufUDP{ 0 }, rcvBufUDP{ 0 }, rcvBufTCP{ 0 },
-		wVersionRequested(MAKEWORD(2, 2)), tcpRunning(FALSE), udpRunning(FALSE), ui(uiOrig) {
-	//initialize overlapped structures
-	memset(&tcpOL, 0, sizeof(WSAOVERLAPPED));
-	memset(&udpOL, 0, sizeof(WSAOVERLAPPED));
-	
-	help.ol = &udpOL;
-	help.thisPtr = this;
-}
-
-/*---------------------------------------------------------------------------------
--- FUNCTION:	  ~Network
---
--- DATE:		  April 3, 2017
---
--- DESIGNER:	  Michael Goll
---
--- DEVELOPER:     Michael Goll
---
--- INTERFACE:     Network::~Network()
---
--- RETURNS:       N/A
---
--- REVISIONS:
---
--- NOTES:         Releases all of the Network resources that will not be released
---                automatically.
------------------------------------------------------------------------------------*/
-Network::~Network() {}
+commonResources common = { 0 };
 
 /*---------------------------------------------------------------------------------
 -- FUNCTION:	  clientStart
@@ -59,7 +12,7 @@ Network::~Network() {}
 --
 -- DEVELOPER:     Michael Goll
 --
--- INTERFACE:     bool Network::clientStart()
+-- INTERFACE:     bool clientStart()
 --
 -- RETURNS:       bool - Whether or not WSA was started up successfully.
 --
@@ -67,8 +20,8 @@ Network::~Network() {}
 --
 -- NOTES:         Starts WSAStartup to use network functionality.
 -----------------------------------------------------------------------------------*/
-bool Network::clientStart() {
-	if (WSAStartup(wVersionRequested, &wsadata) != 0) {
+bool clientStart() {
+	if (WSAStartup(common.wVersionRequested, &common.wsadata) != 0) {
 		//show user there is an error
 		//ui->showMessageBox("Cannot start WSAStartup", "WSAStartup Error", MB_ICONERROR);
 		return FALSE;
@@ -84,7 +37,7 @@ bool Network::clientStart() {
 --
 -- DEVELOPER:     Michael Goll
 --
--- INTERFACE:     void Network::clientStop(bool stopTCP, bool stopUDP)
+-- INTERFACE:     void clientStop(bool stopTCP, bool stopUDP)
 --
 -- PARAMETER:     bool stopTCP - A bool flag that specifies whether or not to stop
 --                               the TCP side.
@@ -98,15 +51,12 @@ bool Network::clientStart() {
 --
 -- NOTES:         Stops either the TCP or UDP thread, or both.
 -----------------------------------------------------------------------------------*/
-void Network::clientStop(bool stopTCP, bool stopUDP) {
+void clientStop(bool stopTCP, bool stopUDP) {
 	if (stopTCP)
-		tcpRunning = FALSE;
+		common.tcpRunning = FALSE;
 
 	if (stopUDP)
-		udpRunning = FALSE;
-
-	TCPthread.join();
-	UDPthread.join();
+		common.udpRunning = FALSE;
 }
 
 /*--------------------------------------------------------------------------
@@ -129,9 +79,9 @@ void Network::clientStop(bool stopTCP, bool stopUDP) {
 -- NOTES:
 -- static function to help direct to class function
 --------------------------------------------------------------------------*/
-void Network::completionRoutine(DWORD error, DWORD transferred, LPWSAOVERLAPPED ol, DWORD flags)
+void callbackRoutine(DWORD error, DWORD transferred, LPWSAOVERLAPPED ol, DWORD flags)
 {
-	reinterpret_cast<Helper *>(&ol)->thisPtr->callbackRoutine(error, transferred, flags);
+	
 }
 
 /*--------------------------------------------------------------------------
@@ -155,7 +105,7 @@ void Network::completionRoutine(DWORD error, DWORD transferred, LPWSAOVERLAPPED 
 -- NOTES:
 -- callback function for handling the wsarecv
 --------------------------------------------------------------------------*/
-void Network::callbackRoutine(DWORD error, DWORD transferred, DWORD flags)
+void CALLBACK completionRoutineUDP(DWORD error, DWORD transferred, LPWSAOVERLAPPED ol, DWORD flags)
 {
 	int retVal;
 	DWORD bRecv;
@@ -164,23 +114,23 @@ void Network::callbackRoutine(DWORD error, DWORD transferred, DWORD flags)
 		//no error here
 	case 0:
 		//push data received into the circular buffer
-		AudioPlayer::instance().getBuf().push_back(rcvBufUDP.buf);
+		//AudioPlayer::instance().getBuf().push_back(rcvBufUDP.buf);
 
 		//empty the receiving buffer
-		memset(rcvBufUDP.buf, 0, sizeof(rcvBufUDP.buf));
+		memset(common.rcvBufUDP.buf, 0, sizeof(common.rcvBufUDP.buf));
 
 		//register again
-		if ((retVal = WSARecvFrom(udpSocket, &rcvBufUDP, 1, &bRecv, &flags, 0, 0, help.ol, completionRoutine)) == SOCKET_ERROR) {
+		if ((retVal = WSARecvFrom(common.udpSocket, &common.rcvBufUDP, 1, &bRecv, &flags, 0, 0, &common.udpOL, completionRoutineUDP)) == SOCKET_ERROR) {
 			retVal = WSAGetLastError();
 
 			if (retVal != WSA_IO_PENDING) {
-				closesocket(udpSocket);
+				closesocket(common.udpSocket);
 				clientStop(FALSE, TRUE);
 				return;
 			}
 		}
-
 		break;
+		
 
 	case WSA_OPERATION_ABORTED:
 		//ui->showMessageBox("Error: Operation Aborted", "Operation Aborted", MB_ICONERROR);
@@ -202,7 +152,7 @@ void Network::callbackRoutine(DWORD error, DWORD transferred, DWORD flags)
 --
 -- DEVELOPER:     Aing Ragunathan, Michael Goll
 --
--- INTERFACE:     void Network::startTCP()
+-- INTERFACE:     void startTCP()
 --
 -- RETURNS:       void
 --
@@ -210,30 +160,32 @@ void Network::callbackRoutine(DWORD error, DWORD transferred, DWORD flags)
 --
 -- NOTES:         Runs through the TCP setup processes.
 -----------------------------------------------------------------------------------*/
-void Network::startTCP() {
+void startTCP(HWND hDlg, char * dest, int port) {
 
 	int errorReturn;
 
 	//dns query, an IP address would return itself
-	if (!(hp = gethostbyname(dest))) {
+	if (!(common.hp = gethostbyname(dest))) {
 		return;
 	}
 
 	if (!createSocket(0)) {
-		//ui->showMessageBox("Cannot create TCP socket.", "TCP Socket Creation Error", MB_ICONERROR);
+		showMessageBox(hDlg, "Cannot create TCP socket.", "TCP Socket Creation Error", MB_ICONERROR);
 		errorReturn = WSAGetLastError();
 		return;
 	}
 
-	fillServerInfo(0);
+	common.serverAddrTCP.sin_family = AF_INET;
+	common.serverAddrTCP.sin_port = htons(TCP_PORT);
+	memcpy((char *)&common.serverAddrTCP.sin_addr, common.hp->h_addr, common.hp->h_length);
 
 	if (!tcpConnect()) {
-		//ui->showMessageBox("Cannot connect to the server.", "Connection Error", MB_ICONERROR);
+		showMessageBox(hDlg, "Cannot connect to the server.", "Connection Error", MB_ICONERROR);
 		return;
 	}
 
-	//ui->swapButtons(IDC_CONNECT, IDC_DISCONNECT);
-	
+	swapButtons(hDlg, IDC_CONNECT, IDC_DISCONNECT);
+	showMessageBox(hDlg, "GOT HERE", "", MB_OK);
 }
 
 /*---------------------------------------------------------------------------------
@@ -245,7 +197,7 @@ void Network::startTCP() {
 --
 -- DEVELOPER:     Aing Ragunathan, Michael Goll
 --
--- INTERFACE:     void Network::startTCP()
+-- INTERFACE:     void startTCP()
 --
 -- RETURNS:       void
 --
@@ -253,47 +205,49 @@ void Network::startTCP() {
 --
 -- NOTES:         Runs through the UDP setup processes.
 -----------------------------------------------------------------------------------*/
-void Network::startUDP() {
+void startUDP(HWND hDlg, char * dest, int port) {
 
 	int retVal;
 	DWORD flags = MSG_PARTIAL, recv;
 
-	memset(&mreq, 0, sizeof(mreq));
-	mreq.imr_multiaddr.s_addr = inet_addr(MCAST_IP);
-	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+	memset(&common.mreq, 0, sizeof(common.mreq));
+	common.mreq.imr_multiaddr.s_addr = inet_addr(MCAST_IP);
+	common.mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 
 	//dns query, an IP address would return itself
-	if (!(hp = gethostbyname(dest))) {
+	if (!(common.hp = gethostbyname(dest))) {
 		return;
 	}
 
 	if (!createSocket(1)) {
-		//ui->showMessageBox("Cannot create UDP socket.", "UDP Socket Creation Error", MB_ICONERROR);
+		showMessageBox(hDlg, "Cannot create UDP socket.", "UDP Socket Creation Error", MB_ICONERROR);
 		return;
 	}
 
-	fillServerInfo(1);
+	common.serverAddrUDP.sin_family = AF_INET;
+	common.serverAddrUDP.sin_port = htons(UDP_PORT);
+	memcpy((char *)&common.serverAddrUDP.sin_addr, common.hp->h_addr, common.hp->h_length);
 
 	//register comp routine
-	if ((retVal = WSARecvFrom(udpSocket, &rcvBufUDP, 1, &recv, &flags, 0, 0, &udpOL, completionRoutine) ) == SOCKET_ERROR) {
+	if ((retVal = WSARecvFrom(common.udpSocket, &common.rcvBufUDP, 1, &recv, &flags, 0, 0, &common.udpOL, completionRoutineUDP)) == SOCKET_ERROR) {
 		retVal = WSAGetLastError();
 
 		if (retVal != WSA_IO_PENDING) {
 			//let user know that receiving failed
 			retVal = WSAGetLastError();
-			//ui->showMessageBox("UDP receive error.", "UDP Receiving Error", MB_ICONERROR);
-			closesocket(udpSocket);
+			showMessageBox(hDlg, "UDP receive error.", "UDP Receiving Error", MB_ICONERROR);
+			closesocket(common.udpSocket);
 			return;
 		}
 	}
 
 	//register for the multicast group
-	addToMultiCast(udpSocket, mreq);
+	addToMultiCast(hDlg, common.udpSocket, common.mreq);
 
 	//continuously listen for datagrams
 	//SleepEx will set the thread in an alertable state in which Windows
 	//will run the completion routine, it won't otherwise.
-	while (udpRunning) {
+	while (common.udpRunning) {
 		if (SleepEx(INFINITE, TRUE) != WAIT_IO_COMPLETION) {
 			//error
 			break;
@@ -310,7 +264,7 @@ void Network::startUDP() {
 --
 -- DEVELOPER:     Michael Goll
 --
--- INTERFACE:     bool Network::createSocket(int connectionType)
+-- INTERFACE:     bool createSocket(int connectionType)
 --
 -- PARAMETER:     int connectionType - Which protocol type you want a socket for
 --                                     0 specifies a TCP socket.
@@ -322,18 +276,18 @@ void Network::startUDP() {
 --
 -- NOTES:         Creates either a UDP socket or a TCP socket.
 -----------------------------------------------------------------------------------*/
-bool Network::createSocket(int connectionType) {
+bool createSocket(int connectionType) {
 	switch (connectionType) {
 	case 0:
-		if ((tcpSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED)) == -1) {
-			closesocket(tcpSocket);
+		if ((common.tcpSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED)) == -1) {
+			closesocket(common.tcpSocket);
 			return FALSE;
 		}
 		break;
 
 	case 1:
-		if ((udpSocket = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP, 0, 0, WSA_FLAG_OVERLAPPED)) == -1) {
-			closesocket(udpSocket);
+		if ((common.udpSocket = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP, 0, 0, WSA_FLAG_OVERLAPPED)) == -1) {
+			closesocket(common.udpSocket);
 			return FALSE;
 		}
 		break;
@@ -350,7 +304,7 @@ bool Network::createSocket(int connectionType) {
 --
 -- DEVELOPER:     Aing Ragunathan, Michael Goll
 --
--- INTERFACE:     void Network::fillServerInfo(int connectionType)
+-- INTERFACE:     void fillServerInfo(int connectionType)
 --
 -- PARAMETER:     int connectionType - Which protocol the server structure port is 
 --                                     filled out.
@@ -365,18 +319,18 @@ bool Network::createSocket(int connectionType) {
 --                which protocol is specified.
 --                The port changes based on the default port for TCP/UDP
 -----------------------------------------------------------------------------------*/
-void Network::fillServerInfo(int connectionType) {
+void fillServerInfo(int connectionType) {
 	switch (connectionType) {
 	case 0:
-		serverAddrTCP.sin_family = AF_INET;
-		serverAddrTCP.sin_port = htons(TCP_PORT);
-		memcpy((char *)&serverAddrTCP.sin_addr, hp->h_addr, hp->h_length);
+		common.serverAddrTCP.sin_family = AF_INET;
+		common.serverAddrTCP.sin_port = htons(TCP_PORT);
+		memcpy((char *)&common.serverAddrTCP.sin_addr, common.hp->h_addr, common.hp->h_length);
 		break;
 
 	case 1:
-		serverAddrUDP.sin_family = AF_INET;
-		serverAddrUDP.sin_port = htons(UDP_PORT);
-		memcpy((char *)&serverAddrUDP.sin_addr, hp->h_addr, hp->h_length);
+		common.serverAddrUDP.sin_family = AF_INET;
+		common.serverAddrUDP.sin_port = htons(UDP_PORT);
+		memcpy((char *)&common.serverAddrUDP.sin_addr, common.hp->h_addr, common.hp->h_length);
 		break;
 	}
 }
@@ -399,9 +353,9 @@ void Network::fillServerInfo(int connectionType) {
 -- NOTES:         Forms a connection between the client and the specified
 --                IP address.
 -----------------------------------------------------------------------------------*/
-bool Network::tcpConnect() {
+bool tcpConnect() {
 	int retVal;
-	if ((retVal = connect(tcpSocket, (sockaddr *)&serverAddrTCP, sizeof(serverAddrTCP))) == SOCKET_ERROR) {
+	if ((retVal = connect(common.tcpSocket, (sockaddr *)&common.serverAddrTCP, sizeof(common.serverAddrTCP))) == SOCKET_ERROR) {
 		retVal = WSAGetLastError();
 		if (retVal != WSAEWOULDBLOCK && retVal != WSAEISCONN) {
 			return FALSE;
@@ -426,27 +380,27 @@ bool Network::tcpConnect() {
 --  NOTES:         Receives control messages from the server and updates lists accordingly
 --				   or initiates downloading a file from the server.
 -----------------------------------------------------------------------------------*/
-bool Network::tcpRecv() {
+bool tcpRecv() {
 	ControlMessage *controlMessage;
 	ClientData *clientData;
 	SongData *songData;
 
 	//Get header from server
-	if (recv(tcpSocket, messageBuffer, sizeof(int), 0) == -1) {
+	if (recv(common.tcpSocket, common.messageBuffer, sizeof(int), 0) == -1) {
 		perror("recvServerMessage - Recv control message failed!");
 		return false;
 	}
 	//manage server update or download response
-	int* header = reinterpret_cast<int*>(messageBuffer);
+	int* header = reinterpret_cast<int*>(common.messageBuffer);
 	//memcpy(&header, messageBuffer, sizeof(int));
 	switch (*header)
 	{
 	case SONG_UPDATE:
-		if (recv(tcpSocket, messageBuffer + sizeof(int), sizeof(SongData) - sizeof(int), 0) == -1) {
+		if (recv(common.tcpSocket, common.messageBuffer + sizeof(int), sizeof(SongData) - sizeof(int), 0) == -1) {
 			perror("recvServerMessage - Recv control message failed!");
 			return false;
 		}
-		songData = (SongData *)messageBuffer;	//extract song from buffer
+		songData = (SongData *)common.messageBuffer;	//extract song from buffer
 		//songs.push_back(SongData());	//create a new song object in the vector
 		SongData recvSongData;
 		recvSongData.SID = songData->SID;	//copy song id over
@@ -456,11 +410,11 @@ bool Network::tcpRecv() {
 		break;
 
 	case CLIENT_UPDATE:
-		if (recv(tcpSocket, messageBuffer + sizeof(int), sizeof(ClientData) - sizeof(int), 0) == -1) {
+		if (recv(common.tcpSocket, common.messageBuffer + sizeof(int), sizeof(ClientData) - sizeof(int), 0) == -1) {
 			perror("recvServerMessage - Recv control message failed!");
 			return false;
 		}
-		clientData = (ClientData *)messageBuffer;	//extract client from buffer
+		clientData = (ClientData *)common.messageBuffer;	//extract client from buffer
 													//clients.push_back(ClientData());	//create a new client object in the vector
 		ClientData recvClientData;
 		sprintf_s(recvClientData.username, STR_MAX_SIZE, "%s", clientData->username);
@@ -493,7 +447,7 @@ bool Network::tcpRecv() {
 --
 --  NOTES:      Receives a file from the server. Number of packets must be specified.
 -----------------------------------------------------------------------------------*/
-bool Network::downloadFile() {
+bool downloadFile() {
 	//differentiate file packet from command
 	return true;
 }
@@ -513,7 +467,7 @@ bool Network::downloadFile() {
 --
 --  NOTES:          Sends a contol message to the server before sending a file.
 -----------------------------------------------------------------------------------*/
-bool Network::uploadFile() {
+bool uploadFile() {
 	HANDLE fileOutputHandle;	//Handle to the requested file to send
 	TCHAR fileBuffer[PACKET_SIZE] = { 0 };	//buffer for file
 											//TCHAR filename[MAX_PATH] = "McLaren.txt";
@@ -544,7 +498,7 @@ bool Network::uploadFile() {
 			}
 
 			//send(Socket, fileBuffer, strlen(fileBuffer), 0); //send the buffer to the server		
-			send(tcpSocket, fileBuffer, bytesRead, 0); //send the buffer to the server		
+			send(common.tcpSocket, fileBuffer, bytesRead, 0); //send the buffer to the server		
 			ol.Offset += bytesRead;	//move the reading window 
 			temp = fileBuffer;	//reset the buffer
 			temp.resize(PACKET_SIZE);
@@ -564,7 +518,7 @@ bool Network::uploadFile() {
 --
 -- DEVELOPER:    Aign Ragunathan
 --
--- INTERFACE:    bool Network::requestSong(int song)
+-- INTERFACE:    bool requestSong(int song)
 --
 -- PARAMETER:    int song - SID of the song requested
 --
@@ -574,7 +528,7 @@ bool Network::uploadFile() {
 --
 -- NOTES:        Sends a song request to the server.
 -----------------------------------------------------------------------------------*/
-bool Network::requestSong(int song) {
+bool requestSong(int song) {
 	ControlMessage *controlMessage;
 	char *messageBuffer;
 
@@ -585,7 +539,7 @@ bool Network::requestSong(int song) {
 	messageBuffer = (char *)controlMessage;
 
 	//send message to server
-	if (send(tcpSocket, messageBuffer, strlen(messageBuffer), 0) == -1)
+	if (send(common.tcpSocket, messageBuffer, strlen(messageBuffer), 0) == -1)
 		return false;
 
 	return true;
@@ -600,7 +554,7 @@ bool Network::requestSong(int song) {
 --
 -- DEVELOPER:     Michael Goll
 --
--- INTERFACE:     void Network::removeFromMultiCast(SOCKET& s, ip_mreq& mreq)
+-- INTERFACE:     void removeFromMultiCast(SOCKET& s, ip_mreq& mreq)
 --
 -- RETURNS:	      none
 --
@@ -608,10 +562,10 @@ bool Network::requestSong(int song) {
 --
 -- NOTES:         Adds the client to the multicast group on the server.
 -----------------------------------------------------------------------------------*/
-void Network::addToMultiCast(SOCKET& s, ip_mreq& mreq) {
+void addToMultiCast(HWND hDlg, SOCKET& s, ip_mreq& mreq) {
 	int retVal;
 	if ((retVal = setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&mreq, sizeof(mreq)) == -1)) {
-		//ui->showMessageBox("Cannot join multicast group.", "Socket Option Error - SockOption Join", MB_ICONERROR);
+		showMessageBox(hDlg, "Cannot join multicast group.", "Socket Option Error - SockOption Join", MB_ICONERROR);
 	}
 }
 
@@ -624,7 +578,7 @@ void Network::addToMultiCast(SOCKET& s, ip_mreq& mreq) {
 --
 -- DEVELOPER:     Michael Goll
 --
--- INTERFACE:     void Network::removeFromMultiCast(SOCKET& s, ip_mreq& mreq)
+-- INTERFACE:     void removeFromMultiCast(SOCKET& s, ip_mreq& mreq)
 --
 -- RETURNS:	      none
 --
@@ -632,9 +586,9 @@ void Network::addToMultiCast(SOCKET& s, ip_mreq& mreq) {
 --
 -- NOTES:         Adds the client to the multicast group on the server.
 -----------------------------------------------------------------------------------*/
-void Network::removeFromMultiCast(SOCKET& s, ip_mreq& mreq) {
+void removeFromMultiCast(HWND hDlg, SOCKET& s, ip_mreq& mreq) {
 	int retVal;
 	if ((retVal = setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char*)&mreq, sizeof(mreq)) == -1)) {
-		//ui->showMessageBox("Cannot leave multicast group.", "Socket Option Error - SockOption Leave", MB_ICONERROR);
+		showMessageBox(hDlg, "Cannot leave multicast group.", "Socket Option Error - SockOption Leave", MB_ICONERROR);
 	}
 }
