@@ -872,7 +872,7 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 				SI->BytesSEND = 0;
 				SI->SentBytesTotal = 0;
 				//send all packets except for last one
-				for (int i = 0; i < totalNumberOfPackets; i++)
+				for (int i = 0; i < totalNumberOfPackets - 1; i++)
 				{
 					SI->DataBuf.buf = packer.getNextPacket();
 					SI->DataBuf.len = PACKET_SIZE;
