@@ -133,10 +133,17 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case IDC_CHOOSEFILE:
-			getFilePath(hDlg);
+			getFilePath(hDlg, TRUE);
+			break;
+
+		case IDC_CHOOSEFILE2:
+			getFilePath(hDlg, FALSE);
 			break;
 
 		case IDC_UPLOAD:
+			break;
+
+		case IDC_DOWNLOAD:
 			break;
 
 		case IDC_PLAY:

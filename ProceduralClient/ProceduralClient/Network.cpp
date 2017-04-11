@@ -1,7 +1,7 @@
 #include "Network.h"
 
 
-commonResources common = { 0 };
+commonResources common;
 
 /*---------------------------------------------------------------------------------
 -- FUNCTION:	  clientStart

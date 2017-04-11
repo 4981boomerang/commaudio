@@ -192,7 +192,7 @@ void showMessageBox(HWND hDlg, char * message, char * title, int iconOption) {
 --
 -- NOTES:      Opens a dialog and allows the user to select a file.
 --------------------------------------------------------------------------------------------*/
-int getFilePath(HWND hDlg) {
+int getFilePath(HWND hDlg, bool version) {
 	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED |
 		COINIT_DISABLE_OLE1DDE);
 
@@ -224,7 +224,10 @@ int getFilePath(HWND hDlg) {
 
 					if (SUCCEEDED(hr))
 					{
-						SetWindowTextW(GetDlgItem(hDlg, IDC_FILEPATH), pszFilePath);
+						if (version)
+							SetWindowTextW(GetDlgItem(hDlg, IDC_FILEPATH), pszFilePath);
+						else
+							SetWindowTextW(GetDlgItem(hDlg, IDC_FILEPATH2), pszFilePath);
 					}
 					pItem->Release();
 				}

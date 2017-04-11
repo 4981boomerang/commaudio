@@ -179,7 +179,7 @@
 	--
 	-- NOTES:      Opens a dialog and allows the user to select a file.
 	--------------------------------------------------------------------------------------------*/
-	int getFilePath(HWND hDlg);
+	int getFilePath(HWND hDlg, bool);
 
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   getFileName
