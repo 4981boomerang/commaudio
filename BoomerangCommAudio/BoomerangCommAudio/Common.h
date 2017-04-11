@@ -118,3 +118,5 @@ inline const std::wstring GetWC(const char *c)
 
 	return wc;
 }
+
+void SaveSongFile(const std::string& fileName, std::vector<std::string>& data);

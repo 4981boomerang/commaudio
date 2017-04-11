@@ -381,6 +381,38 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 		SI->DataBuf.len = BUF_SIZE;
 		SI->DataBuf.buf = SI->Buffer;
 
+		char temp[STR_SIZE];
+
+		int header;
+		memcpy(&header, SI->Buffer, sizeof(int));
+		switch (header)
+		{
+		case PH_REQ_SONG:
+			SI->IsFile = true;
+			SI->vecBuffer.clear();
+			SongData songData;
+			//SongData* songDataTest = reinterpret_cast<SongData*>(SI->Buffer);
+			memcpy(&songData, SI->Buffer, sizeof(SongData));
+			SI->FileName = std::string(songData.filename);
+			sprintf(temp, "Upload - file: %s, title: %s, artist: %s", songData.filename, songData.title, songData.artist);
+			Display(temp);
+			break;
+
+		case 7:
+			SI->IsFile = false;
+			SaveSongFile(SI->FileName, SI->vecBuffer);
+			break;
+
+		default:
+			if (SI->IsFile)
+			{
+				size_t dataLen = strlen(SI->Buffer);
+				std::string recvFileData(SI->Buffer, dataLen);
+				SI->vecBuffer.push_back(recvFileData);
+			}
+			break;
+		}
+
 		if (WSARecv(SI->Socket, &(SI->DataBuf), 1, &RecvBytes, &Flags,
 			&(SI->Overlapped), WorkerRoutine) == SOCKET_ERROR)
 		{
@@ -391,23 +423,9 @@ void CALLBACK WorkerRoutine(DWORD Error, DWORD BytesTransferred, LPWSAOVERLAPPED
 			}
 		}
 
-		char temp[STR_SIZE];
 		sprintf(temp, "Recv %d bytes from %d", RecvBytes, SI->Socket);
 		Display(temp);
 
-		int header;
-		memcpy(&header, SI->Buffer, sizeof(int));
-		switch (header)
-		{
-		case PH_REQ_SONG:
-			SI->IsFile = true;
-			SI->vecBuffer.clear();
-			SongData songData;
-			memcpy(reinterpret_cast<char*>(&songData), SI->Buffer, sizeof(SongData));
-			SI->FileName = std::string(songData.filename);
-			sprintf(temp, "Upload - file: %s, title: %s, artist: %s", songData.filename, songData.title, songData.artist);
-			Display(temp);
-			break;
-		}
+		//SleepEx(INFINITE, TRUE);
 	}
 }
