@@ -197,7 +197,7 @@ void SoundFilePacketizer::clearVector()
 
 void SoundFilePacketizer::makePacketsFromFile(const char * fpath)
 {
-	int read;
+	size_t read;
 
 	//empty a vector that may hold something else
 	if (!vPack.empty())

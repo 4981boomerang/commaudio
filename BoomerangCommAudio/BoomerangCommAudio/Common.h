@@ -18,7 +18,7 @@
 #define DEFAULT_PAC_SIZE 128
 #define DEFAULT_PAC_TIMES 100
 #define STR_SIZE 512
-#define BUF_SIZE 100000
+#define BUF_SIZE 8192
 #define PACKET_STR_MAX 128
 #define IP_LENGTH 64
 
@@ -38,6 +38,7 @@ typedef struct _SOCKET_INFORMATION {
 	DWORD IsFile;
 	std::string FileName;
 	std::vector<std::string> vecBuffer;
+	FILE* file;
 } SOCKET_INFORMATION, *LPSOCKET_INFORMATION;
 
 enum PACKET_HEADER
