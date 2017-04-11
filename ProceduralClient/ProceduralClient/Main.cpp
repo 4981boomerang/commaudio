@@ -23,18 +23,13 @@
 #pragma comment(lib, "ws2_32")
 #pragma comment(lib, "libzplay.lib")
 
-//Win32 Headers
-#include <atlstr.h>  
-#include <CommCtrl.h>
-
-//LibZPlay Header
-#include "../Headers/libzplay.h"
-
 //Custom Headers
-#include "../Headers/Main.h"
-#include "../Headers/Network.h"
-#include "../Headers/UI.h"
+#include "Main.h"
 
+libZPlay::ZPlay * player = libZPlay::CreateZPlay();
+int __stdcall callbackFunc(void * instance, void * userData, libZPlay::TCallbackMessage message, unsigned int param1, unsigned int param2);
+
+extern commonResources common;
 /*-----------------------------------------------------------------------------------------------
 -- FUNCTION:   DialogProc
 --
@@ -59,11 +54,10 @@
 INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	HDC hdc = (HDC)wParam;
-	UI ui(hDlg);
-	Network networkManager(&ui);
 	LVITEM lvI;
 	LVTILEVIEWINFO tvi = { 0 };
 	HWND songList = GetDlgItem(hDlg, IDC_SONGLIST);
+	common.player = player;
 
 	//connection thread
 	HANDLE bgTCPThread = NULL, bgUDPThread = NULL;
@@ -71,6 +65,9 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg)
 	{
 	case WM_INITDIALOG:
+
+		SetDlgItemText(hDlg, IDC_EDIT1, "Not Connected");
+
 		SendMessage(songList, LVM_SETVIEW, (WPARAM)LV_VIEW_TILE, 0);
 
 		tvi.cbSize = sizeof(LVTILEVIEWINFO);
@@ -96,9 +93,9 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		}
 		
 		//temp UI stuff for now
-		ui.setText(IDC_TRACKNAME, "Placeholder Song Title");
-		ui.setText(IDC_ARTIST, "Placeholder Artist Title");
-		ui.setText(IDC_ALBUM, "Placeholder Album Title");
+		setText(hDlg, IDC_TRACKNAME, "Placeholder Song Title");
+		setText(hDlg, IDC_ARTIST, "Placeholder Artist Title");
+		setText(hDlg, IDC_ALBUM, "Placeholder Album Title");
 		//---------------------------------------------------------------
 		return (INT_PTR)TRUE;
 
@@ -112,11 +109,11 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case IDM_HELP:
-			ui.showMessageBox("Enter an IP address into the \"IP Address\" box and the port number and click \"Connect.\"", "Com Audio Help", MB_OK | MB_ICONINFORMATION);
+			showMessageBox(hDlg, "Enter an IP address into the \"IP Address\" box and the port number and click \"Connect.\"", "Com Audio Help", MB_OK | MB_ICONINFORMATION);
 			break;
 
 		case IDM_ABOUT:
-			ui.showMessageBox("Com Audio Developers:\n* Eva Yu\n* Jamie Lee\n* Aing Ragunathan\n* Michael Goll\n", "About Boomerang", MB_OK | MB_ICONQUESTION);
+			showMessageBox(hDlg, "Com Audio Developers:\n* Eva Yu\n* Jamie Lee\n* Aing Ragunathan\n* Michael Goll\n", "About Boomerang", MB_OK | MB_ICONQUESTION);
 			break;
 
 		case IDM_EXIT:
@@ -127,47 +124,58 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case IDC_CONNECT:
-			if (ui.checkUserInput()) {
-				std::string dest = ui.getDestination();
-				int port = ui.getPort();
-				networkManager.setIP(dest);
-				networkManager.setPort(port);
-				networkManager.clientStart();
-
-				networkManager.startTCPthread();
-				networkManager.startUDPthread();
+			if (checkUserInput(hDlg)) {
+				clientStart(hDlg);
+				//TODO: initialize the audio stream
+				bgTCPThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)startTCP, (LPVOID)hDlg, 0, 0);
+				bgUDPThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)startUDP, (LPVOID)hDlg, 0, 0);
+				swapButtons(hDlg, IDC_CONNECT, IDC_DISCONNECT);
 			}
 
 			break;
 
 		case IDC_DISCONNECT:
 			//disconnect here, network cleanup
-			networkManager.clientStop(TRUE, TRUE);
+			clientStop(TRUE, TRUE);
 			WSACleanup();
-			ui.swapButtons(IDC_DISCONNECT, IDC_CONNECT);
+
+			if (bgTCPThread != NULL)
+				TerminateThread(bgTCPThread, 0);
+
+			if (bgUDPThread != NULL)
+				TerminateThread(bgUDPThread, 0);
+
+			swapButtons(hDlg, IDC_DISCONNECT, IDC_CONNECT);
+			SetDlgItemText(hDlg, IDC_EDIT1, "Not Connected");
 			break;
 
 		case IDC_CHOOSEFILE:
-			ui.getFilePath();
+			getFilePath(hDlg, TRUE);
+			break;
+
+		case IDC_CHOOSEFILE2:
+			getFilePath(hDlg, FALSE);
 			break;
 
 		case IDC_UPLOAD:
 			break;
 
+		case IDC_DOWNLOAD:
+			break;
+
 		case IDC_PLAY:
 			//change the "Play" button to "Pause"
-			ui.swapButtons(IDC_PLAY, IDC_PAUSE);
-			AudioPlayer::instance().play();
+			swapButtons(hDlg, IDC_PLAY, IDC_PAUSE);
+			play(hDlg, player);
 			break;
 
 		case IDC_PAUSE:
 			//change the "Pause" button to "Play"
-			ui.swapButtons(IDC_PAUSE, IDC_PLAY);
-			AudioPlayer::instance().pause();
+			swapButtons(hDlg, IDC_PAUSE, IDC_PLAY);
+			pause(hDlg, player);
 			break;
 
 		case IDC_NEXT:
-			ui.addSingleListItem();
 			break;
 
 		case IDC_PREV:
@@ -240,6 +248,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hprevInstance, LPSTR lspszCmdParam
 	SetMenu(hDlg, hMenu);
 	ShowWindow(hDlg, nCmdShow);
 	UpdateWindow(hDlg);
+
+	common.hDlg = hDlg;
 	
 	while ((ret = GetMessage(&msg, 0, 0, 0)) != 0) {
 		if (ret == -1)
@@ -253,19 +263,3 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hprevInstance, LPSTR lspszCmdParam
 
 	return (int)msg.wParam;
 }
-
-int __stdcall callBackFunc(void * instance, void * userData, libZPlay::TCallbackMessage message, unsigned int param1, unsigned int param2) {
-	const auto ap = AudioPlayer::instance().getPlayer();
-	auto buffer = AudioPlayer::instance().pop();
-
-	switch (message) {
-	//player needs more data to play
-	case libZPlay::MsgStreamNeedMoreData:
-		//grabs data from the circular buffer and copies it to the player's internal buffer
-		ap->PushDataToStream(buffer, BUFSIZE);
-		break;
-	}
-	return 0;
-}
-
-
