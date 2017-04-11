@@ -7,8 +7,7 @@
 #include "Common.h"
 #include "BoomerangCommAudio.h"
 #include "Server.h"
-#include "Client.h"
-#include "TCPServer.h"
+
 
 #define MAX_LOADSTRING 100
 
@@ -35,7 +34,7 @@ HWND hDisConnect;
 SOCKET serverSock;
 SOCKET clientSock;
 
-TCPServer tcpServer;
+Server tcpServer;
 
 // Forward declarations of functions included in this code module:
 BOOL                InitInstance(HINSTANCE, int);
@@ -106,12 +105,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	GetDlgItems();
 	SetEnableDlgItems(TRUE);
 
-	wchar_t temp[STR_SIZE] = L"";
-	wsprintf(temp, L"%d", g_port);
+	char temp[STR_SIZE] = "";
+	sprintf_s(temp, STR_SIZE, "%d", g_port);
 	SetDlgItemText(g_hMainDlg, IDC_EDIT_PORT, temp);
-	wsprintf(temp, L"%d", g_packetSize);
+	sprintf_s(temp, STR_SIZE, "%d", g_packetSize);
 	SetDlgItemText(g_hMainDlg, IDC_EDIT_SIZE_PAC, temp);
-	wsprintf(temp, L"%d", g_packetTimes);
+	sprintf_s(temp, STR_SIZE, "%d", g_packetTimes);
 	SetDlgItemText(g_hMainDlg, IDC_EDIT_NUM_PAC, temp);
 
 	return TRUE;
@@ -138,7 +137,7 @@ void GetDlgItems()
 
 INT_PTR CALLBACK MainDlg(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	wchar_t buffer[STR_SIZE] = L"";
+	char buffer[STR_SIZE] = "";
 	DWORD len;
 
 	char strPort[STR_SIZE] = "";
@@ -173,12 +172,12 @@ INT_PTR CALLBACK MainDlg(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_CLIENT_TCP:
 	case WM_CLIENT_UDP:
-		ClientProc(hDlg, message, wParam, lParam, clientSock);
+		//ClientProc(hDlg, message, wParam, lParam, clientSock);
 		break;
 
 	case WM_SOCKET_TCP:
 	case WM_TCP_SERVER_LISTEN:
-		ServerProc(hDlg, message, wParam, lParam, serverSock);
+		//ServerProc(hDlg, message, wParam, lParam, serverSock);
 		break;
 
 	case WM_COMMAND:
@@ -215,7 +214,7 @@ INT_PTR CALLBACK MainDlg(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			else
 			{
-				ConnectClient(clientSock);
+				//ConnectClient(clientSock);
 			}
 			break;
 
@@ -225,11 +224,11 @@ INT_PTR CALLBACK MainDlg(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 			ofn.lStructSize = sizeof(ofn);
 			ofn.hwndOwner = g_hWnd;
-			ofn.lpstrFilter = L"Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0";
+			ofn.lpstrFilter = "Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0";
 			ofn.lpstrFile = buffer;
 			ofn.nMaxFile = STR_SIZE;
 			ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_ALLOWMULTISELECT;
-			ofn.lpstrDefExt = L"txt";
+			ofn.lpstrDefExt = "txt";
 
 			if (GetOpenFileName(&ofn))
 			{
@@ -251,7 +250,7 @@ INT_PTR CALLBACK MainDlg(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDC_BUTTON_SEND_FILE:
 			len = GetWindowTextLengthA(GetDlgItem(g_hMainDlg, IDC_EDIT_FILE));
 			GetWindowTextA(GetDlgItem(g_hMainDlg, IDC_EDIT_FILE), g_filename, len + 1);
-			sendFile(clientSock);
+			//sendFile(clientSock);
 			break;
 
 		case IDC_BUTTON_SUBMIT:
@@ -263,7 +262,7 @@ INT_PTR CALLBACK MainDlg(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			else
 			{
-				SendPacket(clientSock);
+				//SendPacket(clientSock);
 			}
 			break;
 
@@ -288,7 +287,7 @@ INT_PTR CALLBACK MainDlg(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 void SetEnableDlgItems(BOOL bIsServer)
 {
-	SetWindowText(hSubmit, bIsServer == TRUE ? L"Start Server" : L"Send Packet");
+	SetWindowText(hSubmit, bIsServer == TRUE ? "Start Server" : "Send Packet");
 	EnableWindow(hIP, !bIsServer);
 	EnableWindow(hRadioIP, !bIsServer);
 	EnableWindow(hRadioHost, !bIsServer);

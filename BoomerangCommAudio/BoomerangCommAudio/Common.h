@@ -49,6 +49,10 @@ enum PACKET_HEADER
 	PH_NUM_OF_CLIENT,
 	PH_SID,
 
+	PH_REQ_SONG,
+	PH_DATA_PACKET_SONG,
+	PH_END_PACKET_SONG,
+
 	SIZE_OF_HADER
 };
 
@@ -78,6 +82,14 @@ typedef struct _INFO_CLIENT
 	char ip[IP_LENGTH];
 } INFO_CLIENT, *LPINFO_CLIENT;
 
+typedef struct _SongData {
+	int header;
+	int SID;
+	char title[PACKET_STR_MAX];
+	char artist[PACKET_STR_MAX];
+	char filename[FILENAME_MAX];
+} SongData, *LPSongData;
+
 extern HWND g_hWnd;
 extern HWND g_hMainDlg;
 extern HWND g_hResult;
@@ -90,7 +102,7 @@ extern int g_packetSize;
 extern int g_packetTimes;
 extern char g_filename[STR_SIZE];
 
-inline void Display(const wchar_t* str)
+inline void Display(const char* str)
 {
 	ListBox_InsertString(g_hResult, -1, str);
 	ListBox_SetCurSel(g_hResult, ListBox_GetCount(g_hResult) - 1);
@@ -108,3 +120,5 @@ inline const std::wstring GetWC(const char *c)
 
 	return wc;
 }
+
+void SaveSongFile(const std::string& fileName, std::vector<std::string>& data);
