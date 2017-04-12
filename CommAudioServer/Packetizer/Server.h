@@ -48,8 +48,8 @@
 #define BUFFSIZE 1024
 #define PORTNO 5001
 #define MCAST_IP "235.0.0.1"
-#define TEMP_IP "192.168.0.36"
-#define LIB_DIR_PATH "C:\\Users\\Eva\\Documents\\CST\\Semester4\\comp4985\\assignments\\a4\\Radiohead\\"
+#define TEMP_IP "127.0.0.1"
+#define LIB_DIR_PATH "C:\\Users\\mike_\\Music\\"
 
 class Server 
 {

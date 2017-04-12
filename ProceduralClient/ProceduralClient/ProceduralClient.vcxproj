@@ -19,8 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{9A7BE5B6-AAB2-4C2E-A4AB-F10B7FC0FC2B}</ProjectGuid>
-    <RootNamespace>Client</RootNamespace>
+    <ProjectGuid>{01DCFEAE-81DC-4929-B9A8-F1BB6D3D33BC}</ProjectGuid>
+    <RootNamespace>ProceduralClient</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -75,9 +75,6 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
-    <Link>
-      <AdditionalDependencies>libzplay.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -85,9 +82,6 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
-    <Link>
-      <AdditionalDependencies>Ws2_32.lib;libzplay.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -116,19 +110,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Packetizer\Packetizer\Packetizer.cpp" />
-    <ClCompile Include="ClientTCP.cpp" />
-    <ClCompile Include="Microphone.cpp" />
+    <ClCompile Include="..\..\BoomerangCommAudio\BoomerangCommAudio\Packetizer.cpp" />
+    <ClCompile Include="AudioPlayer.cpp" />
+    <ClCompile Include="CBuff.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Network.cpp" />
+    <ClCompile Include="UI.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ClientTCP.h" />
+    <ClInclude Include="..\..\BoomerangCommAudio\BoomerangCommAudio\Common.h" />
+    <ClInclude Include="..\..\BoomerangCommAudio\BoomerangCommAudio\Packetizer.h" />
+    <ClInclude Include="AudioPlayer.h" />
+    <ClInclude Include="CBuff.h" />
     <ClInclude Include="libzplay.h" />
-    <ClInclude Include="MenuSettings.h" />
-    <ClInclude Include="Microphone.h" />
-    <ClInclude Include="Packetizer.h" />
+    <ClInclude Include="Main.h" />
+    <ClInclude Include="Network.h" />
+    <ClInclude Include="Node.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="Semaphore.h" />
+    <ClInclude Include="UI.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="MYMENU.rc" />
+    <ResourceCompile Include="Initialize.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

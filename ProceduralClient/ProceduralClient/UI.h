@@ -38,13 +38,7 @@
 #include <sstream>
 
 //Custom Headers
-#include "../Source/resource.h"
-
-class UI {
-public:
-
-	UI(HWND hwnd) : hDlg(hwnd), itemIndex(0) {}
-	~UI() = default;
+#include "resource.h"
 
 	/* ----------------------------------------------------------------------------
 	-- FUNCTION:   updateUI
@@ -64,7 +58,7 @@ public:
 	--
 	-- NOTES:      Updates all user interface elements to disabled or enabled
 	-----------------------------------------------------------------------------*/
-	void updateUI(bool);
+	void updateUI(HWND hDlg, bool);
 
 
 	/* ----------------------------------------------------------------------------
@@ -86,7 +80,7 @@ public:
 	-- NOTES:      Sets the text of any given window element.
 	--
 	-----------------------------------------------------------------------------*/
-	void setText(int, char *);
+	void setText(HWND hDlg, int, char *);
 
 
 	/* ----------------------------------------------------------------------------
@@ -106,7 +100,7 @@ public:
 	--
 	-- NOTES:      Updates the text above the progress bar.
 	-----------------------------------------------------------------------------*/
-	void updateStatusText(char *);
+	void updateStatusText(HWND hDlg, char *);
 
 
 	/* ----------------------------------------------------------------------------
@@ -126,7 +120,7 @@ public:
 	--
 	-- NOTES:      Gets the user input from the various text fields
 	-----------------------------------------------------------------------------*/
-	bool checkUserInput();
+	bool checkUserInput(HWND hDlg);
 
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   showMessageBox
@@ -147,7 +141,7 @@ public:
 	--
 	-- NOTES:      Spawns a message box with a specified message, title and icon.
 	--------------------------------------------------------------------------------------------*/
-	void showMessageBox(char *, char *, int);
+	void showMessageBox(HWND hDlg, char *, char *, int);
 
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   validateDest
@@ -166,7 +160,7 @@ public:
 	--
 	-- NOTES:      Validates that the destination starts with a character or digit.
 	--------------------------------------------------------------------------------------------*/
-	bool validateDest(char *);
+	bool validateDest(HWND hDlg, char *);
 
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   getFilePath
@@ -185,7 +179,7 @@ public:
 	--
 	-- NOTES:      Opens a dialog and allows the user to select a file.
 	--------------------------------------------------------------------------------------------*/
-	int getFilePath();
+	int getFilePath(HWND hDlg, bool);
 
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   getFileName
@@ -204,7 +198,7 @@ public:
 	--
 	-- NOTES:      Grabs the path from the textbox on the user interface.
 	--------------------------------------------------------------------------------------------*/
-	char * getFileName();
+	char * getFileName(HWND hDlg);
 
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   swapButtons
@@ -228,7 +222,7 @@ public:
 	-- NOTES:      Takes two specified user interface elements and "swaps" them in the view of
 	--             the user.
 	--------------------------------------------------------------------------------------------*/
-	void swapButtons(int, int);
+	void swapButtons(HWND hDlg, int, int);
 
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   getDestination
@@ -249,7 +243,7 @@ public:
 	--
 	-- NOTES:      Gets the IP address specified by the user from the user interface.
 	--------------------------------------------------------------------------------------------*/
-	std::string getDestination();
+	char * getDestination(HWND hDlg);
 
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   getPort
@@ -270,16 +264,10 @@ public:
 	--
 	-- NOTES:      Gets the port number specifed by the user.
 	--------------------------------------------------------------------------------------------*/
-	int getPort();
+	int getPort(HWND hDlg);
 
 	void changeAlbumPicture();
 
-	void addSingleListItem();
-
-	private:
-		HWND hDlg;
-		int itemIndex;
-};
-
+	void addSingleListItem(HWND hDlg);
 
 #endif

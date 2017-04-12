@@ -17,7 +17,7 @@
 #include <vector>
 #include <ws2tcpip.h>
 #include "Microphone.h"
-#include "../../Packetizer/Packetizer/Packetizer.h"
+#include "Packetizer.h"
 //#include "../../Packetizer/Packetizer/CBuff.h"
 
 
@@ -29,7 +29,7 @@
 #define STR_NAME		128
 
 //#define DEFAULT_IP		"192.168.0.22"
-#define DEFAULT_IP		"localhost"
+#define DEFAULT_IP		"10.211.55.3"
 #define TEST_FILE		"06 - Little Wing.flac"
 #define TEST_ARTIST		"Jimi Hendrix"
 #define TEST_TITLE		"Little Wing"

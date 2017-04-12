@@ -25,7 +25,7 @@
 -- NOTES:       Responsible for changing/updating any element on the user interface.
 --------------------------------------------------------------------------------------------------*/
 
-#include "../Headers/UI.h"
+#include "UI.h"
 
 /* ----------------------------------------------------------------------------
 -- FUNCTION:   updateUI
@@ -45,7 +45,7 @@
 --
 -- NOTES:      Updates all user interface elements to disabled or enabled
 -----------------------------------------------------------------------------*/
-void UI::updateUI(bool option) {
+void updateUI(bool option) {
 	
 }
 
@@ -68,7 +68,7 @@ void UI::updateUI(bool option) {
 -- NOTES:      Sets the text of any given window element.
 --
 -----------------------------------------------------------------------------*/
-void UI::setText(int item, char * message) {
+void setText(HWND hDlg, int item, char * message) {
 	SetWindowText(GetDlgItem(hDlg, item), message);
 }
 
@@ -90,7 +90,7 @@ void UI::setText(int item, char * message) {
 --
 -- NOTES:      Updates the text above the progress bar.
 -----------------------------------------------------------------------------*/
-void UI::updateStatusText(char * message) {
+void updateStatusText(char * message) {
 }
 
 
@@ -111,20 +111,20 @@ void UI::updateStatusText(char * message) {
 --
 -- NOTES:      Gets the user input from the various text fields
 -----------------------------------------------------------------------------*/
-bool UI::checkUserInput() {
+bool checkUserInput(HWND hDlg) {
 	char dest[32], port[32], pNum[32], pSize[32];
 	int inputSize = 32;
 	int portNum, packNum, packSize;
 
 	GetDlgItemText(hDlg, IDC_IP, dest, inputSize);
 	if (strcmp(dest, "") == 0) {
-		showMessageBox("IP Address is empty, please specify an IP address", "IP Address Error", MB_OK | MB_ICONERROR);
+		showMessageBox(hDlg, "IP Address is empty, please specify an IP address", "IP Address Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 	
 	GetDlgItemText(hDlg, IDC_PORT, port, inputSize);
 	if (strcmp(port, "") == 0) {
-		showMessageBox("Port number is empty, please specify a port number", "Port Number Error", MB_OK | MB_ICONERROR);
+		showMessageBox(hDlg, "Port number is empty, please specify a port number", "Port Number Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 
@@ -148,7 +148,7 @@ bool UI::checkUserInput() {
 --
 -- NOTES:      Validates that the destination starts with a character or digit.
 --------------------------------------------------------------------------------------------*/
-bool UI::validateDest(char *dest) {
+bool validateDest(char *dest) {
 	return (isalpha(dest[0]) || isdigit(dest[0]));
 }
 
@@ -171,7 +171,7 @@ bool UI::validateDest(char *dest) {
 --
 -- NOTES:      Spawns a message box with a specified message, title and icon.
 --------------------------------------------------------------------------------------------*/
-void UI::showMessageBox(char * message, char * title, int iconOption) {
+void showMessageBox(HWND hDlg, char * message, char * title, int iconOption) {
 	MessageBox(hDlg, message, title, MB_OK | iconOption);
 }
 
@@ -192,7 +192,7 @@ void UI::showMessageBox(char * message, char * title, int iconOption) {
 --
 -- NOTES:      Opens a dialog and allows the user to select a file.
 --------------------------------------------------------------------------------------------*/
-int UI::getFilePath() {
+int getFilePath(HWND hDlg, bool version) {
 	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED |
 		COINIT_DISABLE_OLE1DDE);
 
@@ -224,7 +224,10 @@ int UI::getFilePath() {
 
 					if (SUCCEEDED(hr))
 					{
-						SetWindowTextW(GetDlgItem(hDlg, IDC_FILEPATH), pszFilePath);
+						if (version)
+							SetWindowTextW(GetDlgItem(hDlg, IDC_FILEPATH), pszFilePath);
+						else
+							SetWindowTextW(GetDlgItem(hDlg, IDC_FILEPATH2), pszFilePath);
 					}
 					pItem->Release();
 				}
@@ -254,7 +257,7 @@ int UI::getFilePath() {
 --
 -- NOTES:      Grabs the path from the textbox on the user interface.
 --------------------------------------------------------------------------------------------*/
-char * UI::getFileName() {
+char * getFileName(HWND hDlg) {
 	char name[300];
 	GetDlgItemText(hDlg, IDC_FILEPATH, name, 300);
 	return name;
@@ -269,7 +272,7 @@ char * UI::getFileName() {
 --
 -- PROGRAMMER: Michael Goll
 --
--- INTERFACE:  void UI::swapButtons(int btnToHide, int btntoShow)
+-- INTERFACE:  void swapButtons(int btnToHide, int btntoShow)
 --
 -- PARAMETER:  int btnToHide - User interface button to swap out/hide from view.
 --             int btnToShow - User interface button to swap in/show.
@@ -282,7 +285,7 @@ char * UI::getFileName() {
 -- NOTES:      Takes two specified user interface elements and "swaps" them in the view of
 --             the user.
 --------------------------------------------------------------------------------------------*/
-void UI::swapButtons(int btnToHide, int btntoShow) {
+void swapButtons(HWND hDlg, int btnToHide, int btntoShow) {
 	ShowWindow(GetDlgItem(hDlg, btnToHide), FALSE);
 	ShowWindow(GetDlgItem(hDlg, btntoShow), TRUE);
 }
@@ -296,7 +299,7 @@ void UI::swapButtons(int btnToHide, int btntoShow) {
 --
 -- PROGRAMMER: Michael Goll
 --
--- INTERFACE:  std::string UI::getDestination()
+-- INTERFACE:  std::string getDestination()
 --
 -- PARAMETER:  none
 --
@@ -306,7 +309,7 @@ void UI::swapButtons(int btnToHide, int btntoShow) {
 --
 -- NOTES:      Gets the IP address specified by the user from the user interface.
 --------------------------------------------------------------------------------------------*/
-std::string UI::getDestination() {
+char * getDestination(HWND hDlg) {
 	char dest[15];
 	GetDlgItemText(hDlg, IDC_IP, dest, sizeof(dest));
 	return dest;
@@ -321,7 +324,7 @@ std::string UI::getDestination() {
 --
 -- PROGRAMMER: Michael Goll
 --
--- INTERFACE:  int UI::getPort()
+-- INTERFACE:  int getPort()
 --
 -- PARAMETER:  none
 --
@@ -331,17 +334,18 @@ std::string UI::getDestination() {
 --
 -- NOTES:      Gets the port number specifed by the user.
 --------------------------------------------------------------------------------------------*/
-int UI::getPort() {
+int getPort(HWND hDlg) {
 	char port[15];
 	GetDlgItemText(hDlg, IDC_PORT, port, sizeof(port));
 	return atoi(port);
 }
 
-void UI::changeAlbumPicture() {
+void changeAlbumPicture() {
 
 }
 
-void UI::addSingleListItem() {
+void addSingleListItem(HWND hDlg) {
+	/*
 	HWND listGroup = GetDlgItem(hDlg, IDC_SONGLIST);
 
 	LVITEM lvItem;
@@ -357,6 +361,7 @@ void UI::addSingleListItem() {
 	if (ListView_InsertItem(listGroup, &lvItem) == -1) {
 		showMessageBox("Error inserting item", "Insertion Error", MB_OK | MB_ICONERROR);
 	}
+	*/
 }
 
 

@@ -18,11 +18,12 @@
 #define DEFAULT_PAC_SIZE 128
 #define DEFAULT_PAC_TIMES 100
 #define STR_SIZE 512
-#define BUF_SIZE 100000
+#define BUF_SIZE 8192
 #define PACKET_STR_MAX 128
 #define IP_LENGTH 64
 
 #define DATA_BUFSIZE 8192
+#define PACKET_SIZE 1024
 
 typedef struct _SOCKET_INFORMATION {
 	OVERLAPPED Overlapped;
@@ -38,6 +39,8 @@ typedef struct _SOCKET_INFORMATION {
 	DWORD IsFile;
 	std::string FileName;
 	std::vector<std::string> vecBuffer;
+	FILE* file;
+	DWORD index;
 } SOCKET_INFORMATION, *LPSOCKET_INFORMATION;
 
 enum PACKET_HEADER
@@ -49,9 +52,8 @@ enum PACKET_HEADER
 	PH_NUM_OF_CLIENT,
 	PH_SID,
 
-	PH_REQ_SONG,
-	PH_DATA_PACKET_SONG,
-	PH_END_PACKET_SONG,
+	PH_REQ_UPLOAD_SONG,
+	PH_REQ_DOWNLOAD_SONG,
 
 	SIZE_OF_HADER
 };
@@ -82,13 +84,19 @@ typedef struct _INFO_CLIENT
 	char ip[IP_LENGTH];
 } INFO_CLIENT, *LPINFO_CLIENT;
 
-typedef struct _SongData {
+typedef struct _ReqUploadSong {
 	int header;
 	int SID;
 	char title[PACKET_STR_MAX];
 	char artist[PACKET_STR_MAX];
 	char filename[FILENAME_MAX];
-} SongData, *LPSongData;
+} ReqUploadSong, *LPReqUploadSong;
+
+typedef struct _ReqDownloadSong {
+	int header;
+	int SID;
+	char filename[FILENAME_MAX];
+} ReqDownloadSong, *LPReqDownloadSong;
 
 extern HWND g_hWnd;
 extern HWND g_hMainDlg;
