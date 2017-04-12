@@ -550,9 +550,9 @@ bool uploadFile(HWND hDlg) {
 	strcpy_s(uploadRequest.filename, MAX_PATH, tempFilename.c_str());
 
 	char sbuf[BUF_SIZE];
-	memset((char *)sbuf, 0, sizeof(sbuf));
 
 	messageBuffer = (char *)&uploadRequest;	//make struct sendable
+	memset((char *)sbuf, 0, sizeof(sbuf));
 	memcpy(sbuf, &uploadRequest, sizeof(_ReqUploadSong));
 	send(common.tcpSocket, sbuf, BUF_SIZE, 0);
 
@@ -567,15 +567,18 @@ bool uploadFile(HWND hDlg) {
 
 	//send all packets except for last one
 	for (int i = 0; i < totalNumberOfPackets - 1; i++) {
+		memset((char *)sbuf, 0, sizeof(sbuf));
 		memcpy(sbuf, packer.getNextPacket(), PACKET_SIZE);
 		send(common.tcpSocket, sbuf, BUF_SIZE, 0);
 	}
 
 	//send last packet
+	memset((char *)sbuf, 0, sizeof(sbuf));
 	memcpy(sbuf, packer.getNextPacket(), lastPacketSize);
 	send(common.tcpSocket, sbuf, BUF_SIZE, 0);
 
 	char complete[] = "EndOfPacket";
+	memset((char *)sbuf, 0, sizeof(sbuf));
 	memcpy(sbuf, complete, strlen(complete));
 	send(common.tcpSocket, sbuf, BUF_SIZE, 0);
 

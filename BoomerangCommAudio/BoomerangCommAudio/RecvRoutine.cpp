@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "RecvRoutine.h"
 #include "Common.h"
+#include "Packetizer.h"
+#include "Server.h"
 
 #include <iostream>
 #include <fstream>
@@ -70,32 +72,52 @@ void RecvRoutine::RunThread()
 
 			case PH_REQ_DOWNLOAD_SONG:
 			{
-				//ReqDownloadSong songData;
-				//memcpy(&songData, SI->Buffer, sizeof(ReqDownloadSong));
+				char sbuf[BUF_SIZE];
+				memset((char *)sbuf, 0, sizeof(sbuf));
 
-				//SoundFilePacketizer packer(PACKET_SIZE);
-				//packer.makePacketsFromFile(songData.filename);
-				//long totalNumberOfPackets = packer.getTotalPackets();
-				//int lastPacketSize = packer.getLastPackSize();
+				ReqDownloadSong songData;
+				memcpy(&songData, buf, sizeof(ReqDownloadSong));
 
-				//SI->BytesSEND = 0;
-				//SI->SentBytesTotal = 0;
-				////send all packets except for last one
-				//for (int i = 0; i < totalNumberOfPackets - 1; i++)
-				//{
-				//	SI->DataBuf.buf = packer.getNextPacket();
-				//	SI->DataBuf.len = PACKET_SIZE;
-				//	Server::SendTCP(SI->Socket, SI);
-				//}
+				SoundFilePacketizer packer(PACKET_SIZE);
+				packer.makePacketsFromFile(songData.filename);
+				long totalNumberOfPackets = packer.getTotalPackets();
+				int lastPacketSize = packer.getLastPackSize();
 
-				//SI->DataBuf.buf = packer.getNextPacket();
-				//SI->DataBuf.len = lastPacketSize;
-				//Server::SendTCP(SI->Socket, SI);
+				LPSOCKET_INFORMATION SocketInfo;
+				if ((SocketInfo = (LPSOCKET_INFORMATION)GlobalAlloc(GPTR,
+					sizeof(SOCKET_INFORMATION))) == NULL)
+				{
+					sprintf_s(temp, STR_SIZE, "GlobalAlloc() failed with error %d", GetLastError());
+					Display(temp);
+					return;
+				}
+				// Fill in the details of our accepted socket.
+				SocketInfo->Socket = socket;
+				ZeroMemory(&(SocketInfo->Overlapped), sizeof(OVERLAPPED));
+				SocketInfo->BytesSEND = 0;
+				SocketInfo->BytesRECV = 0;
+				SocketInfo->DataBuf.len = BUF_SIZE;
+				SocketInfo->DataBuf.buf = SocketInfo->Buffer;
 
-				//char complete[] = "EndOfPacket";
-				//SI->DataBuf.buf = complete;
-				//SI->DataBuf.len = strlen(complete) + 1;
-				//Server::SendTCP(SI->Socket, SI);
+				for (int i = 0; i < totalNumberOfPackets - 1; i++)
+				{
+					memset((char *)sbuf, 0, sizeof(sbuf));
+					memcpy(sbuf, packer.getNextPacket(), PACKET_SIZE);
+					send(socket, sbuf, BUF_SIZE, 0);
+				}
+
+				memcpy(sbuf, packer.getNextPacket(), lastPacketSize);
+				send(socket, sbuf, BUF_SIZE, 0);
+
+				char complete[] = "EndOfPacket";
+				memset((char *)sbuf, 0, sizeof(sbuf));
+				memcpy(sbuf, complete, strlen(complete));
+				send(socket, sbuf, BUF_SIZE, 0);
+
+				sprintf_s(temp, STR_SIZE, "Send a song file: %s", songData.filename);
+				Display(temp);
+				
+				GlobalFree(SocketInfo);
 			}
 			break;
 
