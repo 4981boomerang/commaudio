@@ -403,7 +403,7 @@ bool tcpConnect() {
 bool tcpRecv() {
 	CONTROL_MSG *controlMessage;
 	INFO_CLIENT *clientData;
-	SongData *songData;
+	_INFO_SONG *songData;
 
 	//Get header from server
 	if (recv(common.tcpSocket, common.messageBuffer, sizeof(int), 0) == -1) {
@@ -416,13 +416,13 @@ bool tcpRecv() {
 	switch (*header)
 	{
 	case SONG_UPDATE:
-		if (recv(common.tcpSocket, common.messageBuffer + sizeof(int), sizeof(SongData) - sizeof(int), 0) == -1) {
+		if (recv(common.tcpSocket, common.messageBuffer + sizeof(int), sizeof(_INFO_SONG) - sizeof(int), 0) == -1) {
 			perror("recvServerMessage - Recv control message failed!");
 			return false;
 		}
-		songData = (SongData *)common.messageBuffer;	//extract song from buffer
+		songData = (_INFO_SONG *)common.messageBuffer;	//extract song from buffer
 		//songs.push_back(SongData());	//create a new song object in the vector
-		SongData recvSongData;
+		_INFO_SONG recvSongData;
 		recvSongData.SID = songData->SID;	//copy song id over
 		sprintf_s(recvSongData.artist, STR_MAX_SIZE, "%s", songData->artist);
 		sprintf_s(recvSongData.title, STR_MAX_SIZE, "%s", songData->title);
@@ -484,7 +484,7 @@ bool downloadFile() {
 
 
 	//send request song packet (SID)
-	SongData downloadRequest;
+	_ReqDownloadSong downloadRequest;
 	char * messageBuffer;
 
 	//prepare song request packet, NO SID
@@ -528,7 +528,7 @@ bool uploadFile(HWND hDlg) {
 	//get artist
 	//get title
 
-	SongData uploadRequest;
+	_ReqUploadSong uploadRequest;
 	char * messageBuffer;
 	
 
@@ -542,7 +542,7 @@ bool uploadFile(HWND hDlg) {
 	strcpy_s(uploadRequest.filename, MAX_PATH, filename);
 
 	messageBuffer = (char *)&uploadRequest;	//make struct sendable 
-	send(common.tcpSocket, messageBuffer, sizeof(SongData), 0);
+	send(common.tcpSocket, messageBuffer, sizeof(_ReqUploadSong), 0);
 
 
 	//How would I preform validation for opening file?

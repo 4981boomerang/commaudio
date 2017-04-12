@@ -76,5 +76,4 @@ typedef struct _common {
 	void startTCP(HWND hDlg);
 	void startUDP(HWND hDlg);
 
-	//SoundFilePacketizer packer;
 #endif
