@@ -41,7 +41,8 @@
 //#define CBUFF_H
 //#define DEFAULT_CBUFF_SIZE 128
 #define DEFAULT_CBUFF_SIZE 2048 // luxes
-#define DEFAULT_CHARARR_SIZE 2048
+//#define DEFAULT_CHARARR_SIZE 2048
+#define DEFAULT_CHARARR_SIZE 2048 // luxes
 
 class CBuff
 {

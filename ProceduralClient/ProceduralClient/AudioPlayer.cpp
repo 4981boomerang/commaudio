@@ -138,7 +138,7 @@ void stop(ZPlay * player) {
 */
 void init(ZPlay * player) {
 	//load buffer from cbuff
-	while (!common.cbuff.isReadyForRead(0.7)) {
+	while (!common.cbuff.isReadyForRead(0.5)) {
 		Sleep(1000);
 	}
 
