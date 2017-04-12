@@ -75,5 +75,8 @@ typedef struct _common {
 
 	void startTCP(HWND hDlg);
 	void startUDP(HWND hDlg);
-
+	
+	
+	void microphoneStart();
+	int  __stdcall  myCallbackFunc(void* instance, void *user_data, libZPlay::TCallbackMessage message, unsigned int param1, unsigned int param2);
 #endif

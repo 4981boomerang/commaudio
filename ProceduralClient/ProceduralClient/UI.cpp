@@ -365,3 +365,55 @@ void addSingleListItem(HWND hDlg) {
 }
 
 
+
+/*--------------------------------------------------------------------------------------------
+-- FUNCTION:   getListenIP
+--
+-- DATE:       April 12, 2017
+--
+-- DESIGNER:   Aing Ragunathan
+--
+-- PROGRAMMER: Aing Ragunathan
+--
+-- INTERFACE:  int getListenIP(HWND hDlg)
+--					HWND hDlg - Handle to the window
+--
+-- PARAMETER:  none
+--
+-- REVISIONS:
+--
+-- RETURNS:    int - The ip address specified by the user.
+--
+-- NOTES:      Gets the ip address specifed by the user.
+--------------------------------------------------------------------------------------------*/
+int getListenIP(HWND hDlg) {
+	char ip[15];
+	GetDlgItemText(hDlg, IDC_VOIP_LISTEN, ip, sizeof(ip));
+	return atoi(ip);
+}
+
+/*--------------------------------------------------------------------------------------------
+-- FUNCTION:   getSendIP
+--
+-- DATE:       April 12, 2017
+--
+-- DESIGNER:   Aing Ragunathan
+--
+-- PROGRAMMER: Aing Ragunathan
+--
+-- INTERFACE:  int getSendIP(HWND hDlg)
+--					HWND hDlg - Handle to the window
+--
+-- PARAMETER:  none
+--
+-- REVISIONS:
+--
+-- RETURNS:    int - The port number specified by the user.
+--
+-- NOTES:      Gets the port number specifed by the user.
+--------------------------------------------------------------------------------------------*/
+int getSendIP(HWND hDlg) {
+	char ip[15];
+	GetDlgItemText(hDlg, IDC_VOIP_SEND, ip, sizeof(ip));
+	return atoi(ip);
+}
