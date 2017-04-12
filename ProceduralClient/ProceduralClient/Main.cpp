@@ -60,7 +60,7 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	common.player = player;
 
 	//connection thread
-	HANDLE bgTCPThread = NULL, bgUDPThread = NULL, uploadthread = NULL;
+	HANDLE bgTCPThread = NULL, bgUDPThread = NULL, uploadthread = NULL, playbackThread = NULL;
 
 	switch (uMsg)
 	{
@@ -129,6 +129,7 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				//TODO: initialize the audio stream
 				bgTCPThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)startTCP, (LPVOID)hDlg, 0, 0);
 				bgUDPThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)startUDP, (LPVOID)hDlg, 0, 0);
+				playbackThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)init, (LPVOID)common.player, 0, 0);
 				swapButtons(hDlg, IDC_CONNECT, IDC_DISCONNECT);
 			}
 

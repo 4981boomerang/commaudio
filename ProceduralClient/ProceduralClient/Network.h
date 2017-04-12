@@ -23,12 +23,13 @@ constexpr int TCP_PORT = 5000;
 constexpr int UDP_PORT = 5001;
 
 #define WM_SOCKET		104
-#define PACKET_SIZE		1024
+//#define PACKET_SIZE		2048
+#define PACKET_SIZE		2048 // luxes
 #define MAX_THREADS		3
 #define STR_MAX_SIZE	128
 #define STR_NAME		128
 
-#define DEFAULT_IP		"192.168.0.36"
+//#define DEFAULT_IP		"192.168.0.36"
 #define TEST_FILE		"06 - Little Wing.flac"
 
 #define SONG_UPDATE		1

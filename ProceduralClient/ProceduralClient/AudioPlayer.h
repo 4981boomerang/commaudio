@@ -13,7 +13,7 @@
 #include "Network.h"
 #include "../../BoomerangCommAudio/BoomerangCommAudio/Packetizer.h"
 
-#define BUFSIZE 1024
+#define BUFSIZE 2048
 	
 	/*--------------------------------------------------------------------------------------------
 	-- FUNCTION:   createPlayer

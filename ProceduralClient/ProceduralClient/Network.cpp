@@ -89,26 +89,12 @@ void CALLBACK completionRoutineUDP(DWORD error, DWORD transferred, LPWSAOVERLAPP
 {
 	int retVal;
 	DWORD bRecv;
-	
+
 	switch (error) {
 		//no error here
 	case 0:
 		//push data received into the circular buffer
 		common.cbuff.push_back(common.rcvBufUDP.buf);
-
-		/*
-		if (common.initial) {
-			if (common.cbuff.isReadyForRead(0.2)) {
-				init(common.player);
-				common.initial = FALSE;
-			}
-		}
-		*/
-
-		play(common.hDlg, common.player);
-		
-		//empty the receiving buffer
-		memset(common.rcvBufUDP.buf, 0, sizeof(common.rcvBufUDP.buf));
 
 		//register again
 		if ((retVal = WSARecvFrom(common.udpSocket, &common.rcvBufUDP, 1, &bRecv, &flags, 0, 0, &common.udpOL, completionRoutineUDP)) == SOCKET_ERROR) {
@@ -204,6 +190,8 @@ void startUDP(HWND hDlg) {
 	hostent * hp;
 	common.udpRunning = TRUE;
 	char * buf = { 0 };
+
+	clientStart(common.hDlg);
 	
 	//dns query, an IP address would return itself
 	if (!(hp = gethostbyname(getDestination(hDlg)))) {
@@ -226,19 +214,13 @@ void startUDP(HWND hDlg) {
 
 	common.serverAddrUDP.sin_family = AF_INET;
 	common.serverAddrUDP.sin_port = htons(5001);
-	memcpy((char *)&common.serverAddrUDP.sin_addr, common.udpHP->h_addr, common.udpHP->h_length);
+	common.serverAddrUDP.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	if ((retVal = bind(common.udpSocket, (SOCKADDR *)&common.serverAddrUDP, sizeof(SOCKADDR_IN))) == -1) {
 		retVal = WSAGetLastError();
 		closesocket(common.udpSocket);
 		showMessageBox(hDlg, "Cannot Bind Socket, Aborting...", "Socket Bind Error", MB_OK | MB_ICONERROR);
 		return;
-	}
-
-	if (buf == 0) {
-		buf = static_cast<char *>(malloc(PACKET_SIZE * sizeof(char)));
-		common.rcvBufUDP.buf = buf;
-		common.rcvBufUDP.len = 1024;
 	}
 
 	memset(&common.mreq, 0, sizeof(common.mreq));
@@ -248,7 +230,31 @@ void startUDP(HWND hDlg) {
 	//register for the multicast group
 	addToMultiCast(hDlg, common.udpSocket, common.mreq);
 
+	if (buf == 0) {
+		buf = static_cast<char *>(malloc(PACKET_SIZE * sizeof(char)));
+		common.rcvBufUDP.buf = buf;
+		common.rcvBufUDP.len = PACKET_SIZE;
+	}
+
+	/**/
+	int bRecv;
+	char buff[PACKET_SIZE];
+
+	do {
+		bRecv = recvfrom(common.udpSocket, buff, PACKET_SIZE, 0, NULL, 0);
+		if (bRecv < 0)
+		{
+			std::cerr << "RecvFrom Failed Error: "
+				<< WSAGetLastError()
+				<< std::endl;
+			break;
+		}
+		//common.player->PushDataToStream(buff, bRecv);
+		common.cbuff.push_back(buff);
+	} while (common.udpRunning);
+
 	//register comp routine
+	/*
 	if ((retVal = WSARecvFrom(common.udpSocket, &common.rcvBufUDP, 1, &recv, &flags, 0, 0, &common.udpOL, completionRoutineUDP)) == SOCKET_ERROR) {
 		retVal = WSAGetLastError();
 
@@ -259,18 +265,19 @@ void startUDP(HWND hDlg) {
 			return;
 		}
 	}
-
-	init(common.player);
+	*/
 
 	//continuously listen for datagrams
 	//SleepEx will set the thread in an alertable state in which Windows
 	//will run the completion routine, it won't otherwise.
+	/*
 	while (common.udpRunning) {
 		if (SleepEx(INFINITE, TRUE) != WAIT_IO_COMPLETION) {
 			//error
 			break;
 		}
 	}
+	*/
 
 	removeFromMultiCast(hDlg, common.udpSocket, common.mreq);
 }
@@ -299,7 +306,11 @@ void startUDP(HWND hDlg) {
 bool createSocket(int connectionType) {
 	switch (connectionType) {
 	case 0:
-		if ((common.tcpSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED)) == -1) {
+		/*if ((common.tcpSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED)) == -1) {
+			closesocket(common.tcpSocket);
+			return FALSE;
+		}*/
+		if ((common.tcpSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 			closesocket(common.tcpSocket);
 			return FALSE;
 		}
@@ -518,8 +529,8 @@ bool uploadFile(HWND hDlg) {
 	char * filename = { getFileName(common.hDlg) };
 	long totalNumberOfPackets;
 	long lastPacketSize;
-	char title[STR_MAX_SIZE] = "";
-	char artist[STR_MAX_SIZE] = "";
+	char title[STR_MAX_SIZE] = "test";
+	char artist[STR_MAX_SIZE] = "test1111";
 	SoundFilePacketizer packer;
 
 
@@ -528,7 +539,7 @@ bool uploadFile(HWND hDlg) {
 	//get artist
 	//get title
 
-	_ReqUploadSong uploadRequest;
+	ReqUploadSong uploadRequest;
 	char * messageBuffer;
 	
 
@@ -537,29 +548,35 @@ bool uploadFile(HWND hDlg) {
 	sprintf_s(uploadRequest.artist, STR_MAX_SIZE, "%s", artist);
 	sprintf_s(uploadRequest.title, STR_MAX_SIZE, "%s", title);
 
-	GetDlgItemText(hDlg, IDC_FILEPATH, filename, MAX_PATH);
+	//GetDlgItemText(hDlg, IDC_FILEPATH, filename, MAX_PATH);
 	//sprintf_s(uploadRequest.filename, FILENAME_MAX, "%s", filename);
-	strcpy_s(uploadRequest.filename, MAX_PATH, filename);
-
+	//strcpy_s(uploadRequest.filename, MAX_PATH, filename);
+	strcpy_s(uploadRequest.filename, FILENAME_MAX, "06 - Little Wing.flac");
+	
 	messageBuffer = (char *)&uploadRequest;	//make struct sendable 
-	send(common.tcpSocket, messageBuffer, sizeof(_ReqUploadSong), 0);
+	send(common.tcpSocket, messageBuffer, sizeof(ReqUploadSong), 0);
 
 
 	//How would I preform validation for opening file?
 	//file does not exists
 	//file failed to open
 	//can we make SoundFilePacketizer::makePacketsFromFile return bool?
-	packer.makePacketsFromFile(getFileName(common.hDlg));
+	packer.makePacketsFromFile(uploadRequest.filename);
 	totalNumberOfPackets = packer.getTotalPackets();
 	lastPacketSize = packer.getLastPackSize();
 
 	//send all packets except for last one
-	for (int i = 0; i < totalNumberOfPackets; i++) {
-		send(common.tcpSocket, packer.getNextPacket(), PACKET_SIZE, 0);
+	for (int i = 0; i < totalNumberOfPackets - 1; i++) {
+		char* temp = packer.getNextPacket();
+		send(common.tcpSocket, temp, strlen(temp), 0);
+		Sleep(1);
 	}
 
 	//send last packet
-	send(common.tcpSocket, packer.getNextPacket(), lastPacketSize, 0);
+	char* temp = packer.getNextPacket();
+	send(common.tcpSocket, temp, strlen(temp), 0);
+	char complete[] = "EndOfPacket";
+	send(common.tcpSocket, complete, strlen(complete)+1, 0);
 
 
 	//update GUI	- make function 
