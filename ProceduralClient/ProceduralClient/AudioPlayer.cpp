@@ -138,18 +138,22 @@ void stop(ZPlay * player) {
 */
 void init(ZPlay * player) {
 	//load buffer from cbuff
-	while (!common.cbuff.isReadyForRead(0.5)) {
+	while (!common.cbuff.isReadyForRead(0.7)) {
 		Sleep(1000);
 	}
 
-	char buffer[BUFSIZE];
+	player->SetCallbackFunc(callbackFunc, MsgStreamNeedMoreData, 0);
 
-	if ((player->OpenStream(1, 1, &buffer, BUFSIZE, sfPCM)) == 0) {
+	char buffer[PACKET_SIZE];
+
+	if ((player->OpenStream(1, 1, &buffer, PACKET_SIZE, sfPCM)) == 0) {
 		//error occurred opening the stream
 		char * error = player->GetError();
 	}
 
 	player->Play();
+
+	swapButtons(common.hDlg, IDC_PLAY, IDC_PAUSE);
 }
 
 int __stdcall callbackFunc(void * instance, void * userData, TCallbackMessage message, unsigned int param1, unsigned int param2) {

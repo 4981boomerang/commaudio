@@ -23,7 +23,8 @@ constexpr int TCP_PORT = 5000;
 constexpr int UDP_PORT = 5001;
 
 #define WM_SOCKET		104
-#define PACKET_SIZE		1024
+//#define PACKET_SIZE		2048
+#define PACKET_SIZE		2048
 #define MAX_THREADS		3
 #define STR_MAX_SIZE	128
 #define STR_NAME		128

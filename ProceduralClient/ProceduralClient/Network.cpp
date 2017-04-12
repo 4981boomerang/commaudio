@@ -236,7 +236,25 @@ void startUDP(HWND hDlg) {
 		common.rcvBufUDP.len = PACKET_SIZE;
 	}
 
+	/**/
+	int bRecv;
+	char buff[PACKET_SIZE];
+
+	do {
+		bRecv = recvfrom(common.udpSocket, buff, PACKET_SIZE, 0, NULL, 0);
+		if (bRecv < 0)
+		{
+			std::cerr << "RecvFrom Failed Error: "
+				<< WSAGetLastError()
+				<< std::endl;
+			break;
+		}
+		//common.player->PushDataToStream(buff, bRecv);
+		common.cbuff.push_back(buff);
+	} while (common.udpRunning);
+
 	//register comp routine
+	/*
 	if ((retVal = WSARecvFrom(common.udpSocket, &common.rcvBufUDP, 1, &recv, &flags, 0, 0, &common.udpOL, completionRoutineUDP)) == SOCKET_ERROR) {
 		retVal = WSAGetLastError();
 
@@ -247,16 +265,19 @@ void startUDP(HWND hDlg) {
 			return;
 		}
 	}
+	*/
 
 	//continuously listen for datagrams
 	//SleepEx will set the thread in an alertable state in which Windows
 	//will run the completion routine, it won't otherwise.
+	/*
 	while (common.udpRunning) {
 		if (SleepEx(INFINITE, TRUE) != WAIT_IO_COMPLETION) {
 			//error
 			break;
 		}
 	}
+	*/
 
 	removeFromMultiCast(hDlg, common.udpSocket, common.mreq);
 }
