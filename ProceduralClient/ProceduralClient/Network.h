@@ -28,7 +28,7 @@ constexpr int UDP_PORT = 5001;
 #define STR_MAX_SIZE	128
 #define STR_NAME		128
 
-#define DEFAULT_IP		"192.168.0.36"
+//#define DEFAULT_IP		"192.168.0.36"
 #define TEST_FILE		"06 - Little Wing.flac"
 
 #define SONG_UPDATE		1

@@ -137,34 +137,27 @@ void stop(ZPlay * player) {
 --   and include at least one valid MP3 frame.
 */
 void init(ZPlay * player) {
-	char buffer[21000];
-
 	//load buffer from cbuff
 	while (!common.cbuff.isReadyForRead(0.5)) {
 		Sleep(1000);
 	}
 
-	for (int i = 0; i < 210000; i += 1024) {
-		strcat_s(buffer, 1024, common.cbuff.pop().c_str());
-	}
+	char buffer[BUFSIZE];
 
-	if ((player->OpenStream(0, 1, &buffer, 21000, sfMp3)) == 0) {
+	if ((player->OpenStream(1, 1, &buffer, BUFSIZE, sfPCM)) == 0) {
 		//error occurred opening the stream
 		char * error = player->GetError();
 	}
+
+	player->Play();
 }
 
 int __stdcall callbackFunc(void * instance, void * userData, TCallbackMessage message, unsigned int param1, unsigned int param2) {
-	ZPlay * player = (ZPlay*)instance;
-	char buffer[PACKET_SIZE];
-
-	//grab the next packet in the buffer
-	strcpy_s(buffer, PACKET_SIZE, common.cbuff.pop().c_str());
 
 	switch (message) {
 	case MsgStreamNeedMoreData:
 		//add the packet to the internal buffer
-		player->PushDataToStream(buffer, PACKET_SIZE);
+		common.player->PushDataToStream(common.cbuff.pop(), PACKET_SIZE);
 		break;
 
 		return 0;
