@@ -149,6 +149,7 @@
     <ClInclude Include="CBuff.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Packetizer.h" />
+    <ClInclude Include="RecvRoutine.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Semaphore.h" />
     <ClInclude Include="SocketWrappers.h" />
@@ -162,6 +163,7 @@
     <ClCompile Include="CBuff.cpp" />
     <ClCompile Include="Common.cpp" />
     <ClCompile Include="Packetizer.cpp" />
+    <ClCompile Include="RecvRoutine.cpp" />
     <ClCompile Include="SocketWrappers.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

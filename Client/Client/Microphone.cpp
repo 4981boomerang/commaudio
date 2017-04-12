@@ -20,7 +20,7 @@ DWORD WINAPI microphoneStart(LPVOID lpParam) {
 	ZPlay* player;
 	
 
-	player = CreateZPlay();
+	player = 0;//CreateZPlay();
 
 	if (player == 0) {
 		perror("Microphone: Player failed!");

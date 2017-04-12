@@ -116,16 +116,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Packetizer\Packetizer\Packetizer.cpp" />
+    <ClCompile Include="..\..\BoomerangCommAudio\BoomerangCommAudio\Packetizer.cpp" />
     <ClCompile Include="ClientTCP.cpp" />
     <ClCompile Include="Microphone.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\BoomerangCommAudio\BoomerangCommAudio\Packetizer.h" />
     <ClInclude Include="ClientTCP.h" />
     <ClInclude Include="libzplay.h" />
     <ClInclude Include="MenuSettings.h" />
     <ClInclude Include="Microphone.h" />
-    <ClInclude Include="Packetizer.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MYMENU.rc" />

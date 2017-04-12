@@ -294,6 +294,8 @@ public:
 	-- When gets an acceptance, a thread is created with this function.
 	--------------------------------------------------------------------------*/
 	DWORD WINAPI WorkerThread(LPVOID lpParameter);
+
+	void RecvThread(SOCKET socket);
 };
 
 /*------------------------------------------------------------------------------

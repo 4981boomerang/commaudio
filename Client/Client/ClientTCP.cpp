@@ -402,21 +402,25 @@ DWORD WINAPI uploadFile(LPVOID lpParam) {
 	//get title
 	
 	SongData uploadRequest;
+	uploadRequest.header = 6;
 	char * messageBuffer;
+
+	std::string tempFilename = "06 - Little Wing.flac";
 
 	//prepare song request packet, NO SID
 	sprintf_s(uploadRequest.artist, STR_MAX_SIZE, "%s", TEST_ARTIST);
 	sprintf_s(uploadRequest.title, STR_MAX_SIZE, "%s", TEST_TITLE);
+	sprintf_s(uploadRequest.filename, FILENAME_MAX, "%s", tempFilename.c_str());
 
 	messageBuffer = (char *) &uploadRequest;	//make struct sendable 
-	send(Socket, messageBuffer, strlen(messageBuffer), 0);
+	send(Socket, messageBuffer,sizeof(SongData), 0);
 
 
 	//How would I preform validation for opening file?
 		//file does not exists
 		//file failed to open
 		//can we make SoundFilePacketizer::makePacketsFromFile return bool?
-	packer.makePacketsFromFile(filename);
+	packer.makePacketsFromFile(tempFilename.c_str());
 	totalNumberOfPackets = packer.getTotalPackets();
 	lastPacketSize = packer.getLastPackSize();
 
@@ -427,6 +431,9 @@ DWORD WINAPI uploadFile(LPVOID lpParam) {
 		
 	//send last packet
 	send(Socket, packer.getNextPacket(), lastPacketSize, 0); 	
+
+	char complete[] = "EndOfPacket";
+	send(Socket, complete, strlen(complete) + 1, 0);
 
 
 	//update GUI	- make function 

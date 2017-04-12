@@ -299,7 +299,8 @@ void startUDP(HWND hDlg) {
 bool createSocket(int connectionType) {
 	switch (connectionType) {
 	case 0:
-		if ((common.tcpSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED)) == -1) {
+		//if ((common.tcpSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED)) == -1) {
+		if ((common.tcpSocket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 			closesocket(common.tcpSocket);
 			return FALSE;
 		}
@@ -374,8 +375,14 @@ void fillServerInfo(int connectionType) {
 --                IP address.
 -----------------------------------------------------------------------------------*/
 bool tcpConnect() {
+	struct hostent *host;
+	host = gethostbyname("192.168.0.24");
 	int retVal;
-	if ((retVal = connect(common.tcpSocket, (sockaddr *)&common.serverAddrTCP, sizeof(common.serverAddrTCP))) == SOCKET_ERROR) {
+	SOCKADDR_IN SockAddr;
+	SockAddr.sin_port = htons(5000);
+	SockAddr.sin_family = AF_INET;
+	SockAddr.sin_addr.s_addr = *((unsigned long*)host->h_addr);
+	if ((retVal = connect(common.tcpSocket, (sockaddr *)&SockAddr, sizeof(SockAddr))) == SOCKET_ERROR) {
 		retVal = WSAGetLastError();
 		if (retVal != WSAEWOULDBLOCK && retVal != WSAEISCONN) {
 			return FALSE;
@@ -531,6 +538,7 @@ bool uploadFile(HWND hDlg) {
 	_ReqUploadSong uploadRequest;
 	char * messageBuffer;
 	
+	std::string tempFilename = "06 - Little Wing.flac";
 
 	uploadRequest.header = 6;
 	//prepare song request packet, NO SID
@@ -539,27 +547,37 @@ bool uploadFile(HWND hDlg) {
 
 	GetDlgItemText(hDlg, IDC_FILEPATH, filename, MAX_PATH);
 	//sprintf_s(uploadRequest.filename, FILENAME_MAX, "%s", filename);
-	strcpy_s(uploadRequest.filename, MAX_PATH, filename);
+	strcpy_s(uploadRequest.filename, MAX_PATH, tempFilename.c_str());
 
-	messageBuffer = (char *)&uploadRequest;	//make struct sendable 
-	send(common.tcpSocket, messageBuffer, sizeof(_ReqUploadSong), 0);
+	char sbuf[BUF_SIZE];
+	memset((char *)sbuf, 0, sizeof(sbuf));
+
+	messageBuffer = (char *)&uploadRequest;	//make struct sendable
+	memcpy(sbuf, &uploadRequest, sizeof(_ReqUploadSong));
+	send(common.tcpSocket, sbuf, BUF_SIZE, 0);
 
 
 	//How would I preform validation for opening file?
 	//file does not exists
 	//file failed to open
 	//can we make SoundFilePacketizer::makePacketsFromFile return bool?
-	packer.makePacketsFromFile(getFileName(common.hDlg));
+	packer.makePacketsFromFile(tempFilename.c_str());
 	totalNumberOfPackets = packer.getTotalPackets();
 	lastPacketSize = packer.getLastPackSize();
 
 	//send all packets except for last one
-	for (int i = 0; i < totalNumberOfPackets; i++) {
-		send(common.tcpSocket, packer.getNextPacket(), PACKET_SIZE, 0);
+	for (int i = 0; i < totalNumberOfPackets - 1; i++) {
+		memcpy(sbuf, packer.getNextPacket(), PACKET_SIZE);
+		send(common.tcpSocket, sbuf, BUF_SIZE, 0);
 	}
 
 	//send last packet
-	send(common.tcpSocket, packer.getNextPacket(), lastPacketSize, 0);
+	memcpy(sbuf, packer.getNextPacket(), lastPacketSize);
+	send(common.tcpSocket, sbuf, BUF_SIZE, 0);
+
+	char complete[] = "EndOfPacket";
+	memcpy(sbuf, complete, strlen(complete));
+	send(common.tcpSocket, sbuf, BUF_SIZE, 0);
 
 
 	//update GUI	- make function 
