@@ -184,8 +184,8 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		case IDC_CALL:
 			//spawn microphone thread here
+			uploadthread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)uploadFile, (LPVOID)hDlg, 0, 0);
 			break;
-
 		}
 		break;
 
